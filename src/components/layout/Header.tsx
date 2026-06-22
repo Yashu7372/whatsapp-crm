@@ -11,6 +11,15 @@ const pageTitles: Record<string, string> = {
   '/settings/bot': 'AI Bot Configuration',
   '/settings/team': 'Team Management',
   '/settings/billing': 'Billing & Plans',
+  '/settings/webhook': 'Webhook Setup',
+  '/profile': 'Profile',
+  '/trends': 'Trend Intelligence',
+  '/leads': 'Lead Intelligence',
+  '/learning': 'Learning Insights',
+  '/content-studio': 'Content Studio',
+  '/approvals': 'Approval Queue',
+  '/calendar': 'Content Calendar',
+  '/platforms': 'Platform Integrations',
 };
 
 export default function Header() {

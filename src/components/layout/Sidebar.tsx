@@ -4,9 +4,14 @@ import {
   LayoutDashboard, MessageSquare, Users, Calendar,
   Megaphone, BarChart3, Bot, UserPlus,
   CreditCard, Zap, LogOut, User, ChevronUp, Globe,
-  TrendingUp, Target, Brain, Wand2, CheckSquare, CalendarDays, Layers,
+  TrendingUp, Target, Brain, Wand2, CheckSquare, CalendarDays, Layers, X,
 } from 'lucide-react';
 import { api } from '../../services/api';
+
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
 
 const navItems = [
   { section: 'Main', items: [
@@ -40,7 +45,7 @@ const navItems = [
   ]},
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const navigate = useNavigate();
   const [workspace, setWorkspace] = useState<any>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -58,13 +63,16 @@ export default function Sidebar() {
   const isConnected = workspace?.whatsapp_connected;
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${isOpen ? ' open' : ''}`}>
       <div className="sidebar-logo">
         <div className="logo-icon"><Zap size={20} /></div>
         <div>
           <h1>Jeeva CRM</h1>
           <span>AI WhatsApp Assistant</span>
         </div>
+        <button className="sidebar-close-btn" onClick={onClose} aria-label="Close menu">
+          <X size={18} />
+        </button>
       </div>
 
       <nav className="sidebar-nav">
