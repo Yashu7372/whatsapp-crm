@@ -19,8 +19,8 @@ router.get('/status', (_req: Request, res: Response) => {
   res.json({
     status: tunnelStatus,
     tunnelUrl,
-    webhookUrl: tunnelUrl ? `${tunnelUrl}/webhook/whatsapp` : null,
-    verifyToken: workspace?.webhook_verify_token || null,
+    // Tunnel points to Spring Boot (/webhook), not the demo Express server
+    webhookUrl: tunnelUrl ? `${tunnelUrl}/webhook` : null,
     error: tunnelError,
   });
 });
@@ -30,7 +30,7 @@ router.get('/status', (_req: Request, res: Response) => {
  */
 router.post('/start', (_req: Request, res: Response) => {
   if (tunnelStatus === 'active' && tunnelUrl) {
-    return res.json({ success: true, tunnelUrl, webhookUrl: `${tunnelUrl}/webhook/whatsapp` });
+    return res.json({ success: true, tunnelUrl, webhookUrl: `${tunnelUrl}/webhook` });
   }
 
   tunnelStatus = 'starting';
@@ -46,7 +46,7 @@ router.post('/start', (_req: Request, res: Response) => {
   res.json({ success: true, message: 'Tunnel starting...' });
 
   // Start localhost.run via SSH
-  const lt = exec('ssh -o StrictHostKeyChecking=no -R 80:localhost:3001 nokey@localhost.run -T 2>&1');
+  const lt = exec('ssh -o StrictHostKeyChecking=no -R 80:localhost:8080 nokey@localhost.run -T 2>&1');
   tunnelProcess = lt;
 
   lt.stdout?.on('data', (data: string) => {
@@ -55,7 +55,7 @@ router.post('/start', (_req: Request, res: Response) => {
     if (urlMatch && !tunnelUrl) {
       tunnelUrl = urlMatch[0];
       tunnelStatus = 'active';
-      console.log(`🌐 Tunnel active (localhost.run): ${tunnelUrl}/webhook/whatsapp`);
+      console.log(`🌐 Tunnel active (localhost.run): ${tunnelUrl}/webhook`);
     }
   });
 
@@ -65,7 +65,7 @@ router.post('/start', (_req: Request, res: Response) => {
     if (urlMatch && !tunnelUrl) {
       tunnelUrl = urlMatch[0];
       tunnelStatus = 'active';
-      console.log(`🌐 Tunnel active (localhost.run): ${tunnelUrl}/webhook/whatsapp`);
+      console.log(`🌐 Tunnel active (localhost.run): ${tunnelUrl}/webhook`);
     }
     if (!tunnelUrl && data.includes('Warning: Permanently added')) {
       // Ignorable ssh warning

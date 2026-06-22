@@ -5,6 +5,7 @@ import {
   Terminal, Link
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { http } from '../../api/httpClient';
 
 type TunnelStatus = 'idle' | 'starting' | 'active' | 'error';
 
@@ -12,21 +13,28 @@ interface TunnelState {
   status: TunnelStatus;
   tunnelUrl: string | null;
   webhookUrl: string | null;
-  verifyToken: string | null;
   error: string | null;
+}
+
+interface WebhookConfig {
+  webhookPath: string;
+  verifyToken: string;
+  port: number;
 }
 
 export default function WebhookSetup() {
   const [tunnel, setTunnel] = useState<TunnelState>({
-    status: 'idle', tunnelUrl: null, webhookUrl: null, verifyToken: null, error: null,
+    status: 'idle', tunnelUrl: null, webhookUrl: null, error: null,
   });
+  const [webhookConfig, setWebhookConfig] = useState<WebhookConfig | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Poll tunnel status while starting
   useEffect(() => {
     api.getTunnelStatus().then(setTunnel).catch(console.error);
+    // Verify token and webhook path come from Spring Boot
+    http.get<WebhookConfig>('/webhook/config').then(setWebhookConfig).catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -122,7 +130,7 @@ export default function WebhookSetup() {
           ))}
         </div>
         <div style={{ marginTop: 14, padding: '10px 14px', background: 'var(--blue-glow)', borderRadius: 'var(--radius-xs)', fontSize: '0.82rem', color: 'var(--blue)' }}>
-          <strong>Key requirement:</strong> Meta needs to reach your server over the internet. Since you're running locally, we use a tunnel to create a public URL that forwards to <code style={{ background: 'rgba(0,0,0,0.2)', padding: '1px 5px', borderRadius: 3 }}>localhost:3001</code>
+          <strong>Key requirement:</strong> Meta needs to reach your server over the internet. Since you're running locally, we use a tunnel to create a public URL that forwards to <code style={{ background: 'rgba(0,0,0,0.2)', padding: '1px 5px', borderRadius: 3 }}>localhost:8080/webhook</code> (Spring Boot)
         </div>
       </div>
 
@@ -217,9 +225,9 @@ export default function WebhookSetup() {
         }}>
           <Shield size={16} color="var(--blue)" style={{ flexShrink: 0 }} />
           <code style={{ flex: 1, fontSize: '0.9rem', fontWeight: 600, letterSpacing: '0.02em' }}>
-            {tunnel.verifyToken || 'Loading...'}
+            {webhookConfig?.verifyToken || 'Loading...'}
           </code>
-          {tunnel.verifyToken && <CopyBtn text={tunnel.verifyToken} id="verify-token" />}
+          {webhookConfig?.verifyToken && <CopyBtn text={webhookConfig.verifyToken} id="verify-token" />}
         </div>
       </div>
 
@@ -250,7 +258,7 @@ export default function WebhookSetup() {
           <li>
             Paste your <strong>Verify Token</strong>:{' '}
             <code style={{ background: 'var(--bg-primary)', padding: '2px 8px', borderRadius: 4, fontSize: '0.82rem', color: 'var(--blue)' }}>
-              {tunnel.verifyToken || 'loading...'}
+              {webhookConfig?.verifyToken || 'loading...'}
             </code>
           </li>
           <li>Click <strong>Verify and Save</strong> — Meta will send a GET request to your server ✅</li>

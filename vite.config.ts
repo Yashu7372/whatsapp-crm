@@ -39,9 +39,10 @@ export default defineConfig({
     proxy: {
       // Phase 2-6 routes → Spring Boot (port 8080)
       '/api/v1': { target: 'http://localhost:8080', changeOrigin: true },
-      // Legacy demo routes (workspace, contacts, messages) → Express (port 3001)
+      // WhatsApp webhook (Meta verification + inbound messages) → Spring Boot
+      '/webhook': { target: 'http://localhost:8080', changeOrigin: true },
+      // Legacy demo routes (workspace, contacts, messages, tunnel) → Express (port 3001)
       '/api': { target: 'http://localhost:3001', changeOrigin: true },
-      '/webhook': { target: 'http://localhost:3001', changeOrigin: true },
     },
   },
 })
