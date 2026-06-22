@@ -3,8 +3,6 @@ import { Plus, Megaphone, CheckCircle, FileText, PauseCircle } from 'lucide-reac
 import { campaignApi } from '../api/campaignApi';
 import type { Campaign } from '../types/campaign';
 
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
-
 const goalLabel: Record<string, string> = {
   AWARENESS: 'Awareness',
   LEADS: 'Leads',
@@ -47,7 +45,7 @@ export default function Campaigns() {
     if (!name.trim()) return;
     setSubmitting(true);
     try {
-      await campaignApi.create({ tenantId: DEMO_TENANT_ID, name: name.trim(), goal, brief });
+      await campaignApi.create({ name: name.trim(), goal, brief });
       setName(''); setGoal('AWARENESS'); setBrief('');
       setShowForm(false);
       load();

@@ -3,7 +3,6 @@ import { CalendarDays, Plus, X } from 'lucide-react';
 import { publishingApi, type ScheduleJobInput } from '../api/publishingApi';
 import type { PublishJob } from '../types/publishing';
 
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 const PLATFORMS = ['INSTAGRAM', 'FACEBOOK', 'LINKEDIN', 'TIKTOK', 'TWITTER', 'WHATSAPP', 'YOUTUBE'];
 
 const statusBadge: Record<string, string> = {
@@ -61,7 +60,6 @@ export default function ContentCalendar() {
     setSubmitting(true);
     try {
       const input: ScheduleJobInput = {
-        tenantId: DEMO_TENANT_ID,
         contentIdeaId: contentIdeaId.trim(),
         platformAccountId: platformAccountId.trim() || 'default',
         platformCode,

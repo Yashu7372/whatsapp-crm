@@ -21,7 +21,6 @@ export interface ContentVariant {
 }
 
 export interface GenerateContentInput {
-  tenantId: string;
   campaignId?: string;
   platformCode: string;
   contentType: string;

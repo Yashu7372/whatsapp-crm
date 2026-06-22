@@ -25,6 +25,8 @@ const ContentCalendar = lazy(() => import('./pages/ContentCalendar'));
 const LeadIntelligence = lazy(() => import('./pages/LeadIntelligence'));
 const PlatformIntegrations = lazy(() => import('./pages/PlatformIntegrations'));
 const LearningInsights = lazy(() => import('./pages/LearningInsights'));
+const Products = lazy(() => import('./pages/Products'));
+const Orders = lazy(() => import('./pages/Orders'));
 
 function PageLoader() {
   return (
@@ -72,6 +74,8 @@ export default function App() {
             <Route path="/leads"            element={<LeadIntelligence />} />
             <Route path="/platforms"        element={<PlatformIntegrations />} />
             <Route path="/learning"         element={<LearningInsights />} />
+            <Route path="/products"         element={<Products />} />
+            <Route path="/orders"           element={<Orders />} />
           </Route>
 
           {/* Default redirect */}

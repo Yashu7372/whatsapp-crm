@@ -13,7 +13,6 @@ export interface Campaign {
 }
 
 export interface CreateCampaignInput {
-  tenantId: string;
   name: string;
   goal: string;
   brief: string;

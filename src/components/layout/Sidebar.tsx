@@ -5,6 +5,7 @@ import {
   Megaphone, BarChart3, Bot, UserPlus,
   CreditCard, Zap, LogOut, User, ChevronUp, Globe,
   TrendingUp, Target, Brain, Wand2, CheckSquare, CalendarDays, Layers, X, FileText,
+  Package, ShoppingCart,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { logout } from '../../api/httpClient';
@@ -34,6 +35,10 @@ const navItems = [
     { to: '/content-studio', icon: Wand2, label: 'Content Studio' },
     { to: '/approvals', icon: CheckSquare, label: 'Approvals' },
     { to: '/calendar', icon: CalendarDays, label: 'Calendar' },
+  ]},
+  { section: 'Commerce', items: [
+    { to: '/products', icon: Package, label: 'Products' },
+    { to: '/orders', icon: ShoppingCart, label: 'Orders' },
   ]},
   { section: 'Connections', items: [
     { to: '/platforms', icon: Layers, label: 'Platform Integrations' },

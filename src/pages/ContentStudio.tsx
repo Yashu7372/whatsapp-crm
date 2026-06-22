@@ -3,8 +3,6 @@ import { Wand2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { contentApi } from '../api/contentApi';
 import type { ContentIdea, ContentVariant } from '../types/content';
 
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
-
 const PLATFORMS = ['INSTAGRAM', 'FACEBOOK', 'LINKEDIN', 'TIKTOK', 'TWITTER', 'WHATSAPP'];
 const CONTENT_TYPES = ['REEL', 'POST', 'STORY', 'CAROUSEL', 'ARTICLE', 'TEXT'];
 const STATUS_TABS = ['ALL', 'GENERATED', 'REVIEW', 'APPROVED'] as const;
@@ -136,7 +134,6 @@ export default function ContentStudio() {
     setGenerating(true);
     try {
       await contentApi.generate({
-        tenantId: DEMO_TENANT_ID,
         platformCode: platform,
         contentType,
         topic: topic.trim(),

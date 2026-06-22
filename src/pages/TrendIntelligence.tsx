@@ -3,7 +3,6 @@ import { TrendingUp, Plus, X } from 'lucide-react';
 import { trendApi } from '../api/trendApi';
 import type { TrendSignal } from '../types/trend';
 
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 const PLATFORMS = ['INSTAGRAM', 'FACEBOOK', 'LINKEDIN', 'TIKTOK', 'TWITTER', 'WHATSAPP', 'YOUTUBE'];
 
 type SortKey = 'finalScore' | 'capturedAt';
@@ -62,7 +61,6 @@ export default function TrendIntelligence() {
     setSubmitting(true);
     try {
       await trendApi.importSignal({
-        tenantId: DEMO_TENANT_ID,
         keyword, hashtag, topic, country, industry, platformCode, rawScore,
       });
       setKeyword(''); setHashtag(''); setTopic(''); setCountry(''); setIndustry('');

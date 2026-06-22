@@ -21,6 +21,8 @@ const pageTitles: Record<string, string> = {
   '/calendar': 'Content Calendar',
   '/platforms': 'Platform Integrations',
   '/documents': 'Document Control',
+  '/products': 'Products',
+  '/orders': 'WhatsApp Orders',
 };
 
 export default function Header() {

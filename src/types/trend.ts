@@ -25,7 +25,6 @@ export interface TrendSignal {
 }
 
 export interface ImportTrendInput {
-  tenantId: string;
   keyword: string;
   hashtag: string;
   topic: string;
