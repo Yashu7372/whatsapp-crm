@@ -20,6 +20,7 @@ const pageTitles: Record<string, string> = {
   '/approvals': 'Approval Queue',
   '/calendar': 'Content Calendar',
   '/platforms': 'Platform Integrations',
+  '/documents': 'Document Control',
 };
 
 export default function Header() {

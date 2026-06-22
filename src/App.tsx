@@ -1,8 +1,11 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import DashboardLayout from './components/layout/DashboardLayout';
+import AuthGuard from './components/AuthGuard';
 
 /* Lazy-loaded pages for optimal code splitting */
+const Login = lazy(() => import('./pages/Login'));
+const Documents = lazy(() => import('./pages/Documents'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Inbox = lazy(() => import('./pages/Inbox'));
 const Contacts = lazy(() => import('./pages/Contacts'));
@@ -44,29 +47,31 @@ export default function App() {
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          {/* Onboarding (no sidebar) */}
+          {/* Public routes */}
+          <Route path="/login" element={<Login />} />
           <Route path="/onboarding" element={<Onboarding />} />
 
-          {/* Dashboard layout with sidebar */}
-          <Route element={<DashboardLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/inbox" element={<Inbox />} />
-            <Route path="/contacts" element={<Contacts />} />
-            <Route path="/bookings" element={<Bookings />} />
-            <Route path="/campaigns" element={<Campaigns />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/settings/bot" element={<BotSettings />} />
-            <Route path="/settings/team" element={<TeamSettings />} />
+          {/* Protected dashboard layout */}
+          <Route element={<AuthGuard><DashboardLayout /></AuthGuard>}>
+            <Route path="/dashboard"        element={<Dashboard />} />
+            <Route path="/inbox"            element={<Inbox />} />
+            <Route path="/contacts"         element={<Contacts />} />
+            <Route path="/bookings"         element={<Bookings />} />
+            <Route path="/campaigns"        element={<Campaigns />} />
+            <Route path="/analytics"        element={<Analytics />} />
+            <Route path="/documents"        element={<Documents />} />
+            <Route path="/settings/bot"     element={<BotSettings />} />
+            <Route path="/settings/team"    element={<TeamSettings />} />
             <Route path="/settings/billing" element={<BillingSettings />} />
             <Route path="/settings/webhook" element={<WebhookSetup />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/trends" element={<TrendIntelligence />} />
-            <Route path="/content-studio" element={<ContentStudio />} />
-            <Route path="/approvals" element={<ApprovalQueue />} />
-            <Route path="/calendar" element={<ContentCalendar />} />
-            <Route path="/leads" element={<LeadIntelligence />} />
-            <Route path="/platforms" element={<PlatformIntegrations />} />
-            <Route path="/learning" element={<LearningInsights />} />
+            <Route path="/profile"          element={<ProfilePage />} />
+            <Route path="/trends"           element={<TrendIntelligence />} />
+            <Route path="/content-studio"   element={<ContentStudio />} />
+            <Route path="/approvals"        element={<ApprovalQueue />} />
+            <Route path="/calendar"         element={<ContentCalendar />} />
+            <Route path="/leads"            element={<LeadIntelligence />} />
+            <Route path="/platforms"        element={<PlatformIntegrations />} />
+            <Route path="/learning"         element={<LearningInsights />} />
           </Route>
 
           {/* Default redirect */}

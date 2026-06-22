@@ -4,9 +4,10 @@ import {
   LayoutDashboard, MessageSquare, Users, Calendar,
   Megaphone, BarChart3, Bot, UserPlus,
   CreditCard, Zap, LogOut, User, ChevronUp, Globe,
-  TrendingUp, Target, Brain, Wand2, CheckSquare, CalendarDays, Layers, X,
+  TrendingUp, Target, Brain, Wand2, CheckSquare, CalendarDays, Layers, X, FileText,
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { logout } from '../../api/httpClient';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -37,6 +38,9 @@ const navItems = [
   { section: 'Connections', items: [
     { to: '/platforms', icon: Layers, label: 'Platform Integrations' },
   ]},
+  { section: 'Documents', items: [
+    { to: '/documents', icon: FileText, label: 'Document Control' },
+  ]},
   { section: 'Settings', items: [
     { to: '/settings/webhook', icon: Globe, label: 'Webhook Setup' },
     { to: '/settings/bot', icon: Bot, label: 'AI Bot Config' },
@@ -56,7 +60,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const handleLogout = () => {
     setShowUserMenu(false);
-    navigate('/onboarding');
+    logout();
   };
 
   const businessInitial = workspace?.name ? workspace.name[0].toUpperCase() : '?';
