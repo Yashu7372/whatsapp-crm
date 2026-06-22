@@ -15,6 +15,13 @@ const BillingSettings = lazy(() => import('./pages/settings/BillingSettings'));
 const ProfilePage = lazy(() => import('./pages/settings/ProfilePage'));
 const WebhookSetup = lazy(() => import('./pages/settings/WebhookSetup'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
+const TrendIntelligence = lazy(() => import('./pages/TrendIntelligence'));
+const ContentStudio = lazy(() => import('./pages/ContentStudio'));
+const ApprovalQueue = lazy(() => import('./pages/ApprovalQueue'));
+const ContentCalendar = lazy(() => import('./pages/ContentCalendar'));
+const LeadIntelligence = lazy(() => import('./pages/LeadIntelligence'));
+const PlatformIntegrations = lazy(() => import('./pages/PlatformIntegrations'));
+const LearningInsights = lazy(() => import('./pages/LearningInsights'));
 
 function PageLoader() {
   return (
@@ -53,6 +60,13 @@ export default function App() {
             <Route path="/settings/billing" element={<BillingSettings />} />
             <Route path="/settings/webhook" element={<WebhookSetup />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/trends" element={<TrendIntelligence />} />
+            <Route path="/content-studio" element={<ContentStudio />} />
+            <Route path="/approvals" element={<ApprovalQueue />} />
+            <Route path="/calendar" element={<ContentCalendar />} />
+            <Route path="/leads" element={<LeadIntelligence />} />
+            <Route path="/platforms" element={<PlatformIntegrations />} />
+            <Route path="/learning" element={<LearningInsights />} />
           </Route>
 
           {/* Default redirect */}

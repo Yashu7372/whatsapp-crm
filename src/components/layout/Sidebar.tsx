@@ -3,7 +3,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, MessageSquare, Users, Calendar,
   Megaphone, BarChart3, Bot, UserPlus,
-  CreditCard, Zap, LogOut, User, ChevronUp, Globe
+  CreditCard, Zap, LogOut, User, ChevronUp, Globe,
+  TrendingUp, Target, Brain, Wand2, CheckSquare, CalendarDays, Layers,
 } from 'lucide-react';
 import { api } from '../../services/api';
 
@@ -17,6 +18,19 @@ const navItems = [
   { section: 'Marketing', items: [
     { to: '/campaigns', icon: Megaphone, label: 'Campaigns' },
     { to: '/analytics', icon: BarChart3, label: 'Analytics' },
+  ]},
+  { section: 'Intelligence', items: [
+    { to: '/trends', icon: TrendingUp, label: 'Trends' },
+    { to: '/leads', icon: Target, label: 'Leads' },
+    { to: '/learning', icon: Brain, label: 'Learning Insights' },
+  ]},
+  { section: 'Content', items: [
+    { to: '/content-studio', icon: Wand2, label: 'Content Studio' },
+    { to: '/approvals', icon: CheckSquare, label: 'Approvals' },
+    { to: '/calendar', icon: CalendarDays, label: 'Calendar' },
+  ]},
+  { section: 'Connections', items: [
+    { to: '/platforms', icon: Layers, label: 'Platform Integrations' },
   ]},
   { section: 'Settings', items: [
     { to: '/settings/webhook', icon: Globe, label: 'Webhook Setup' },
