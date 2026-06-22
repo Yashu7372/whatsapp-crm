@@ -1,0 +1,23 @@
+# ─── Express / Node.js backend ────────────────────────────────────────────────
+FROM node:22-slim
+
+# Build tools required for better-sqlite3 native addon compilation
+RUN apt-get update && \
+    apt-get install -y python3 make g++ && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install all deps (tsx is a devDep but needed to run TypeScript directly)
+COPY package*.json ./
+RUN npm ci
+
+# Copy only the server source (no React src needed here)
+COPY server ./server
+
+# SQLite data dir — mounted as a volume so data survives container restarts
+RUN mkdir -p data
+
+EXPOSE 3001
+
+CMD ["npx", "tsx", "server/src/index.ts"]

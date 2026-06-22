@@ -1,8 +1,8 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.jeevacrm.app',
-  appName: 'Jeeva CRM',
+  appId: 'com.dhaddigitalcrm.app',
+  appName: 'Dhad Digital CRM',
   webDir: 'dist',
   server: { androidScheme: 'https' },
 };

@@ -9,7 +9,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/*.png'],
       manifest: {
-        name: 'Jeeva CRM — AI Marketing Platform',
+        name: 'Dhad Digital CRM — AI Marketing Platform',
         short_name: 'Jeeva CRM',
         description: 'Multi-platform AI marketing and lead intelligence platform',
         theme_color: '#0a0e1a',

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, MessageSquare, Users, Calendar,
@@ -76,7 +76,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       <div className="sidebar-logo">
         <div className="logo-icon"><Zap size={20} /></div>
         <div>
-          <h1>Jeeva CRM</h1>
+          <h1>Dhad Digital CRM</h1>
           <span>AI WhatsApp Assistant</span>
         </div>
         <button className="sidebar-close-btn" onClick={onClose} aria-label="Close menu">

@@ -1,0 +1,30 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ANDROID_SDK_ROOT=/sdk
+ENV ANDROID_HOME=/sdk
+ENV PATH=${PATH}:/sdk/cmdline-tools/latest/bin:/sdk/platform-tools:/sdk/emulator
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-17-jdk-headless wget unzip curl git ca-certificates gradle && \
+  rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Install Android command line tools
+RUN mkdir -p /sdk/cmdline-tools && \
+    cd /tmp && \
+    wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline.zip && \
+    unzip -q cmdline.zip -d /sdk/cmdline-tools && \
+    mv /sdk/cmdline-tools/cmdline-tools /sdk/cmdline-tools/latest && \
+    rm cmdline.zip
+
+# Install SDK packages required for a typical Android Gradle build
+RUN yes | /sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/sdk "platform-tools" "platforms;android-33" "build-tools;33.0.2" || true
+
+# Accept licenses
+RUN yes | /sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+# Default entry: run gradle inside mounted android project
+ENTRYPOINT ["/bin/sh", "-c"]
+

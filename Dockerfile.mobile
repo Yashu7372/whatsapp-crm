@@ -1,0 +1,19 @@
+FROM node:22-bullseye
+
+# Install lightweight Java (openjdk) so Capacitor/Gradle files can be generated.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openjdk-17-jdk-headless git ca-certificates unzip wget && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install production/dev deps (ignore native scripts during install)
+COPY package*.json ./
+RUN npm ci --ignore-scripts
+
+# Copy source (we mount the host whatsapp-crm into /app/src at runtime)
+COPY . .
+
+# Default entrypoint — compose overrides command with the build steps.
+ENTRYPOINT ["/bin/sh", "-c"]
+

@@ -60,7 +60,7 @@ export default function Onboarding() {
             <Zap size={22} color="#fff" />
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: '1.2rem' }}>Jeeva CRM</div>
+            <div style={{ fontWeight: 800, fontSize: '1.2rem' }}>Dhad Digital CRM</div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Setup Wizard</div>
           </div>
         </div>
