@@ -1,68 +1,207 @@
-import { Plus, Send, Eye, MessageSquare, MousePointerClick, MoreVertical, Megaphone } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Plus, Megaphone, CheckCircle, FileText, PauseCircle } from 'lucide-react';
+import { campaignApi } from '../api/campaignApi';
+import type { Campaign } from '../types/campaign';
 
-const statusStyle: Record<string, string> = {
-  draft: 'gray', scheduled: 'blue', sending: 'orange', sent: 'green', failed: 'red',
+const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+
+const goalLabel: Record<string, string> = {
+  AWARENESS: 'Awareness',
+  LEADS: 'Leads',
+  ENGAGEMENT: 'Engagement',
+  TRAFFIC: 'Traffic',
 };
 
-// Campaigns are Phase 2 (requires WhatsApp template approval from Meta)
-// Showing empty state with explanation
+const statusBadge: Record<string, string> = {
+  ACTIVE: 'green',
+  DRAFT: 'gray',
+  PAUSED: 'orange',
+  COMPLETED: 'blue',
+};
+
+function fmt(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
 export default function Campaigns() {
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [name, setName] = useState('');
+  const [goal, setGoal] = useState('AWARENESS');
+  const [brief, setBrief] = useState('');
+
+  function load() {
+    setLoading(true);
+    setError(null);
+    campaignApi.list().then(setCampaigns).catch((e) => setError(e.message)).finally(() => setLoading(false));
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSubmitting(true);
+    try {
+      await campaignApi.create({ tenantId: DEMO_TENANT_ID, name: name.trim(), goal, brief });
+      setName(''); setGoal('AWARENESS'); setBrief('');
+      setShowForm(false);
+      load();
+    } catch (err: any) {
+      alert('Failed to create campaign: ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const total = campaigns.length;
+  const active = campaigns.filter((c) => c.status === 'ACTIVE').length;
+  const draft = campaigns.filter((c) => c.status === 'DRAFT').length;
+  const completed = campaigns.filter((c) => c.status === 'COMPLETED').length;
+
   return (
     <div className="animate-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Broadcast Campaigns</h2>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Campaigns</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-            Send targeted WhatsApp campaigns with smart retargeting
+            Manage AI marketing campaigns across all connected platforms
           </p>
         </div>
-        <button className="btn btn-primary" disabled style={{ opacity: 0.5 }}>
-          <Plus size={16} /> Create Campaign
+        <button className="btn btn-primary" onClick={() => setShowForm((v) => !v)}>
+          <Plus size={16} /> New Campaign
         </button>
       </div>
 
-      {/* Coming Soon Banner */}
-      <div style={{
-        padding: 32, background: 'var(--bg-card)', border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)', textAlign: 'center', marginBottom: 20,
-      }}>
-        <div style={{ fontSize: '3rem', marginBottom: 16 }}>📢</div>
-        <h3 style={{ fontWeight: 700, marginBottom: 8 }}>Broadcast Campaigns — Coming Soon</h3>
-        <p style={{ color: 'var(--text-muted)', maxWidth: 520, margin: '0 auto 20px', fontSize: '0.88rem', lineHeight: 1.7 }}>
-          Campaign broadcasts require <strong>Meta-approved WhatsApp Message Templates</strong>.
-          Get your templates approved in the Meta Business Manager, then campaigns will be unlocked here.
-        </p>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px',
-          background: 'var(--blue-glow)', borderRadius: 'var(--radius-sm)', color: 'var(--blue)', fontSize: '0.85rem',
-        }}>
-          <MessageSquare size={16} />
-          <span>First connect WhatsApp and get template approval from Meta</span>
+      {showForm && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card-header">
+            <h3 className="card-title">Create New Campaign</h3>
+            <button className="btn btn-ghost btn-sm" onClick={() => setShowForm(false)}>Cancel</button>
+          </div>
+          <form onSubmit={handleCreate}>
+            <div className="form-group">
+              <label className="form-label">Campaign Name</label>
+              <input
+                className="form-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Summer Product Launch"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Goal</label>
+              <select className="form-select" value={goal} onChange={(e) => setGoal(e.target.value)}>
+                <option value="AWARENESS">Awareness</option>
+                <option value="LEADS">Leads</option>
+                <option value="ENGAGEMENT">Engagement</option>
+                <option value="TRAFFIC">Traffic</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Brief</label>
+              <textarea
+                className="form-input"
+                value={brief}
+                onChange={(e) => setBrief(e.target.value)}
+                placeholder="Describe the campaign strategy, target audience, and key messages..."
+                rows={4}
+              />
+            </div>
+            <button className="btn btn-primary" type="submit" disabled={submitting}>
+              {submitting ? 'Creating...' : 'Create Campaign'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon blue"><Megaphone size={22} /></div>
+          <div className="stat-value">{total}</div>
+          <div className="stat-label">Total Campaigns</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon green"><CheckCircle size={22} /></div>
+          <div className="stat-value">{active}</div>
+          <div className="stat-label">Active</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon orange"><FileText size={22} /></div>
+          <div className="stat-value">{draft}</div>
+          <div className="stat-label">Draft</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon purple"><PauseCircle size={22} /></div>
+          <div className="stat-value">{completed}</div>
+          <div className="stat-label">Completed</div>
         </div>
       </div>
 
-      {/* Feature Preview */}
       <div className="card">
         <div className="card-header">
-          <h3 className="card-title">What campaigns will include</h3>
+          <h3 className="card-title">All Campaigns</h3>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-          {[
-            { icon: <Send size={20} />, title: 'Broadcast Messages', desc: 'Send to your entire contact list or segments' },
-            { icon: <Eye size={20} />, title: 'Read Receipts', desc: 'Track delivered, read, and replied rates' },
-            { icon: <MousePointerClick size={20} />, title: 'Click Tracking', desc: 'See who clicked your call-to-action buttons' },
-            { icon: <Megaphone size={20} />, title: 'Smart Retargeting', desc: 'Re-send to contacts who didn\'t reply or click' },
-          ].map((f, i) => (
-            <div key={i} style={{
-              padding: 16, background: 'var(--bg-primary)', borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border)',
-            }}>
-              <div style={{ color: 'var(--accent)', marginBottom: 8 }}>{f.icon}</div>
-              <div style={{ fontWeight: 600, marginBottom: 4, fontSize: '0.88rem' }}>{f.title}</div>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{f.desc}</div>
-            </div>
-          ))}
-        </div>
+
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)' }}>
+            Loading campaigns...
+          </div>
+        ) : error ? (
+          <div style={{ textAlign: 'center', padding: 48, color: 'var(--red)' }}>
+            {error}
+            <br />
+            <button className="btn btn-secondary btn-sm" style={{ marginTop: 12 }} onClick={load}>
+              Retry
+            </button>
+          </div>
+        ) : campaigns.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon"><Megaphone size={40} /></div>
+            <h3>No campaigns yet</h3>
+            <p>Create your first campaign to get started with AI-powered marketing</p>
+          </div>
+        ) : (
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Goal</th>
+                  <th>Status</th>
+                  <th>Platforms</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {campaigns.map((c) => (
+                  <tr key={c.id}>
+                    <td style={{ fontWeight: 600 }}>{c.name}</td>
+                    <td>
+                      <span className="badge gray">{goalLabel[c.goal] ?? c.goal}</span>
+                    </td>
+                    <td>
+                      <span className={`badge ${statusBadge[c.status] ?? 'gray'}`}>{c.status}</span>
+                    </td>
+                    <td>
+                      {c.platformCodes && c.platformCodes.length > 0
+                        ? c.platformCodes.map((p) => (
+                            <span key={p} className="badge blue" style={{ marginRight: 4 }}>{p}</span>
+                          ))
+                        : <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>}
+                    </td>
+                    <td style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{fmt(c.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

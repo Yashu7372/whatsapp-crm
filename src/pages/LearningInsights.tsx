@@ -1,6 +1,55 @@
-import { Brain, BarChart2, Users, Lightbulb, FileBarChart } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Brain, Lightbulb } from 'lucide-react';
+import { analyticsApi } from '../api/analyticsApi';
+import type { LearningInsight } from '../types/analytics';
+
+const insightTypeBadge: Record<string, string> = {
+  CONTENT_PERFORMANCE: 'blue',
+  LEAD_CONVERSION: 'green',
+  AUDIENCE_BEHAVIOUR: 'purple',
+  BEST_TIME_TO_POST: 'orange',
+  HASHTAG_PERFORMANCE: 'yellow',
+  PLATFORM_COMPARISON: 'blue',
+};
+
+function ConfidenceBar({ value }: { value: number }) {
+  const color = value >= 0.8 ? 'var(--accent)' : value >= 0.5 ? 'var(--blue)' : 'var(--text-muted)';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ flex: 1, height: 5, background: 'var(--border)', borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', borderRadius: 4, background: color,
+          width: `${Math.min(value * 100, 100)}%`,
+          transition: 'width 0.5s ease',
+        }} />
+      </div>
+      <span style={{ fontSize: '0.75rem', color, fontWeight: 600, minWidth: 32, textAlign: 'right' }}>
+        {(value * 100).toFixed(0)}%
+      </span>
+    </div>
+  );
+}
+
+function fmt(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
 
 export default function LearningInsights() {
+  const [insights, setInsights] = useState<LearningInsight[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  function load() {
+    setLoading(true);
+    setError(null);
+    analyticsApi.getInsights()
+      .then(setInsights)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => { load(); }, []);
+
   return (
     <div className="animate-in">
       <div style={{ marginBottom: 20 }}>
@@ -10,49 +59,67 @@ export default function LearningInsights() {
         </p>
       </div>
 
-      <div style={{
-        padding: 32, background: 'var(--bg-card)', border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)', textAlign: 'center', marginBottom: 20,
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          <Brain size={48} color="var(--purple)" />
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>Loading insights...</div>
+      ) : error ? (
+        <div style={{ textAlign: 'center', padding: 60, color: 'var(--red)' }}>
+          {error}
+          <br />
+          <button className="btn btn-secondary btn-sm" style={{ marginTop: 12 }} onClick={load}>Retry</button>
         </div>
-        <h3 style={{ fontWeight: 700, marginBottom: 8 }}>Learning Insights — Coming Soon</h3>
-        <p style={{ color: 'var(--text-muted)', maxWidth: 520, margin: '0 auto 20px', fontSize: '0.88rem', lineHeight: 1.7 }}>
-          The AI continuously learns from your content performance and lead conversion patterns.
-          Insights surface here as actionable recommendations to improve your strategy over time.
-        </p>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px',
-          background: 'var(--purple-glow)', borderRadius: 'var(--radius-sm)', color: 'var(--purple)', fontSize: '0.85rem',
-        }}>
-          <Brain size={16} />
-          <span>Insights will appear as your content and lead data accumulates</span>
+      ) : insights.length === 0 ? (
+        <div className="empty-state" style={{ paddingTop: 80 }}>
+          <div className="empty-icon"><Brain size={40} /></div>
+          <h3>No learning insights yet</h3>
+          <p>
+            Insights are generated automatically after content is published and analytics are ingested.
+            Publish content and ingest analytics data to see AI-powered recommendations here.
+          </p>
         </div>
-      </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {insights.map((insight) => (
+            <div key={insight.id} className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                <div style={{ flex: 1, minWidth: 0, marginRight: 16 }}>
+                  <h3 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 6 }}>{insight.title}</h3>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span className={`badge ${insightTypeBadge[insight.insightType] ?? 'gray'}`}>
+                      {insight.insightType.replace(/_/g, ' ')}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {fmt(insight.generatedAt)}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ flexShrink: 0, width: 140 }}>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 4, textAlign: 'right' }}>
+                    Confidence
+                  </p>
+                  <ConfidenceBar value={insight.confidenceScore} />
+                </div>
+              </div>
 
-      <div className="card">
-        <div className="card-header">
-          <h3 className="card-title">What Learning Insights will provide</h3>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-          {[
-            { icon: <BarChart2 size={20} />, title: 'Performance Patterns', desc: 'Identify which content types, formats, and times drive the most engagement' },
-            { icon: <Users size={20} />, title: 'Lead Conversion Insights', desc: 'Understand which lead sources and journeys convert most reliably' },
-            { icon: <Lightbulb size={20} />, title: 'Content Recommendations', desc: 'AI-generated suggestions for what to create next based on past results' },
-            { icon: <FileBarChart size={20} />, title: 'Automated Reports', desc: 'Weekly and monthly insight digests delivered automatically' },
-          ].map((f, i) => (
-            <div key={i} style={{
-              padding: 16, background: 'var(--bg-primary)', borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border)',
-            }}>
-              <div style={{ color: 'var(--purple)', marginBottom: 8 }}>{f.icon}</div>
-              <div style={{ fontWeight: 600, marginBottom: 4, fontSize: '0.88rem' }}>{f.title}</div>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{f.desc}</div>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 14 }}>
+                {insight.summary}
+              </p>
+
+              {insight.recommendation && (
+                <div style={{
+                  display: 'flex', gap: 12, padding: '12px 16px',
+                  background: 'var(--accent-glow)', borderRadius: 'var(--radius-sm)',
+                  border: '1px solid rgba(34,197,94,0.2)',
+                }}>
+                  <Lightbulb size={16} color="var(--accent)" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <p style={{ fontSize: '0.85rem', color: 'var(--accent)', lineHeight: 1.6 }}>
+                    {insight.recommendation}
+                  </p>
+                </div>
+              )}
             </div>
           ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }
