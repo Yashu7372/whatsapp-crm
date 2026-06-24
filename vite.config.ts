@@ -3,6 +3,10 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  define: {
+    // Enable mock mode in all builds so the deployed demo works without a backend
+    'import.meta.env.VITE_MOCK': JSON.stringify('true'),
+  },
   plugins: [
     react(),
     VitePWA({
