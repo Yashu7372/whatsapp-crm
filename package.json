@@ -10,9 +10,14 @@
     "preview": "vite preview",
     "server:dev": "tsx watch server/src/index.ts",
     "server:start": "tsx server/src/index.ts",
-    "dev:all": "concurrently \"npm run dev\" \"npm run server:dev\""
+    "dev:all": "concurrently \"npm run dev\" \"npm run server:dev\"",
+    "cap:sync": "cap sync",
+    "cap:android": "cap open android",
+    "cap:ios": "cap open ios"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
     "@google/generative-ai": "^0.24.1",
     "axios": "^1.16.1",
     "better-sqlite3": "^12.10.0",
@@ -28,6 +33,7 @@
     "uuid": "^14.0.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.1",
     "@eslint/js": "^10.0.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.19",
