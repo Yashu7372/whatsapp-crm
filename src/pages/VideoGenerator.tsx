@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Film, Sparkles, Trash2, ChevronDown, ChevronUp, Music, Hash, Clock, Copy, Check, Layers } from 'lucide-react';
+import { Film, Sparkles, Trash2, ChevronDown, ChevronUp, Music, Hash, Clock, Copy, Check, Layers, Share2 } from 'lucide-react';
 import { videoApi, type VideoScript, type GenerateVideoInput, type VideoTemplateOption } from '../api/videoApi';
 
 const PLATFORMS = ['INSTAGRAM', 'TIKTOK', 'YOUTUBE', 'FACEBOOK', 'LINKEDIN', 'TWITTER', 'WHATSAPP'];
@@ -17,31 +17,55 @@ function parseHashtags(raw: string): string[] {
   catch { return []; }
 }
 
+const canShare = typeof navigator !== 'undefined' && !!navigator.share;
+
+function buildShareText(script: VideoScript, tags: string[]) {
+  return [
+    script.caption ?? script.title,
+    '',
+    tags.join(' '),
+    script.musicSuggestion ? `\n🎵 ${script.musicSuggestion}` : '',
+  ].join('\n').trim();
+}
+
+function buildFullText(script: VideoScript, tags: string[]) {
+  return [
+    `🎬 ${script.title}`,
+    `Platform: ${script.platformCode} | Type: ${script.contentType} | Duration: ${script.durationSecs}s`,
+    '',
+    `HOOK: ${script.hook}`,
+    '',
+    `SCRIPT:\n${script.scriptBody}`,
+    '',
+    `CAPTION: ${script.caption}`,
+    '',
+    `HASHTAGS: ${tags.join(' ')}`,
+    '',
+    `MUSIC: ${script.musicSuggestion}`,
+  ].join('\n');
+}
+
 function ScriptCard({ script, onDelete }: { script: VideoScript; onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const shots = parseShotList(script.shotList);
   const tags = parseHashtags(script.hashtags);
 
-  function copyScript() {
-    const text = [
-      `🎬 ${script.title}`,
-      `Platform: ${script.platformCode} | Type: ${script.contentType} | Duration: ${script.durationSecs}s`,
-      '',
-      `HOOK: ${script.hook}`,
-      '',
-      `SCRIPT:\n${script.scriptBody}`,
-      '',
-      `CAPTION: ${script.caption}`,
-      '',
-      `HASHTAGS: ${tags.join(' ')}`,
-      '',
-      `MUSIC: ${script.musicSuggestion}`,
-    ].join('\n');
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+  async function handleShare() {
+    const shareText = buildShareText(script, tags);
+    if (canShare) {
+      try {
+        await navigator.share({ title: script.title, text: shareText });
+      } catch {
+        // user dismissed the sheet — no-op
+      }
+    } else {
+      // Desktop fallback: copy full script to clipboard
+      navigator.clipboard.writeText(buildFullText(script, tags)).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    }
   }
 
   return (
@@ -60,8 +84,17 @@ function ScriptCard({ script, onDelete }: { script: VideoScript; onDelete: () =>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={copyScript} className="btn btn-ghost" style={{ padding: '5px 10px', fontSize: '0.78rem' }} title="Copy script">
-            {copied ? <Check size={14} color="var(--accent)" /> : <Copy size={14} />}
+          <button
+            onClick={handleShare}
+            className="btn btn-ghost"
+            style={{ padding: '5px 10px', fontSize: '0.78rem' }}
+            title={canShare ? 'Share to Instagram, TikTok…' : 'Copy script'}
+          >
+            {copied
+              ? <Check size={14} color="var(--accent)" />
+              : canShare
+                ? <Share2 size={14} />
+                : <Copy size={14} />}
           </button>
           <button onClick={onDelete} className="btn btn-ghost" style={{ padding: '5px 10px', color: 'var(--red)' }} title="Delete">
             <Trash2 size={14} />
@@ -146,6 +179,19 @@ function ScriptCard({ script, onDelete }: { script: VideoScript; onDelete: () =>
           </span>
         )}
       </div>
+
+      {/* Share / Copy CTA */}
+      <button
+        onClick={handleShare}
+        className="btn btn-primary"
+        style={{ width: '100%', marginTop: 14, gap: 8 }}
+      >
+        {canShare
+          ? <><Share2 size={14} /> Share — Instagram, TikTok, WhatsApp…</>
+          : copied
+            ? <><Check size={14} /> Copied!</>
+            : <><Copy size={14} /> Copy Caption + Hashtags</>}
+      </button>
     </div>
   );
 }
