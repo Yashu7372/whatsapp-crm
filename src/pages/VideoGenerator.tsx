@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Film, Sparkles, Trash2, ChevronDown, ChevronUp, Music, Hash, Clock, Copy, Check } from 'lucide-react';
-import { videoApi, type VideoScript, type GenerateVideoInput } from '../api/videoApi';
+import { Film, Sparkles, Trash2, ChevronDown, ChevronUp, Music, Hash, Clock, Copy, Check, Layers } from 'lucide-react';
+import { videoApi, type VideoScript, type GenerateVideoInput, type VideoTemplateOption } from '../api/videoApi';
 
 const PLATFORMS = ['INSTAGRAM', 'TIKTOK', 'YOUTUBE', 'FACEBOOK', 'LINKEDIN', 'TWITTER', 'WHATSAPP'];
 const CONTENT_TYPES = ['REEL', 'SHORT', 'STORY', 'POST', 'ARTICLE'];
@@ -152,6 +152,7 @@ function ScriptCard({ script, onDelete }: { script: VideoScript; onDelete: () =>
 
 export default function VideoGenerator() {
   const [scripts, setScripts] = useState<VideoScript[]>([]);
+  const [templates, setTemplates] = useState<VideoTemplateOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -161,13 +162,17 @@ export default function VideoGenerator() {
   const [contentType, setContentType] = useState('REEL');
   const [style, setStyle] = useState('ENGAGING');
   const [duration, setDuration] = useState(30);
+  const [template, setTemplate] = useState('PRODUCT_SHOWCASE');
 
   function load() {
     setLoading(true);
     videoApi.list().then(setScripts).catch(() => setScripts([])).finally(() => setLoading(false));
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    videoApi.listTemplates().then(setTemplates).catch(() => setTemplates([]));
+  }, []);
 
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();
@@ -181,6 +186,7 @@ export default function VideoGenerator() {
         contentType,
         style,
         durationSecs: duration,
+        template,
       };
       const script = await videoApi.generate(input);
       setScripts((prev) => [script, ...prev]);
@@ -255,6 +261,40 @@ export default function VideoGenerator() {
               </select>
             </div>
           </div>
+
+          {/* Template selector */}
+          {templates.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Layers size={13} /> Video Template
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 8 }}>
+                {templates.map((t) => (
+                  <button
+                    key={t.code}
+                    type="button"
+                    onClick={() => setTemplate(t.code)}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      border: template === t.code ? '2px solid var(--blue)' : '1px solid var(--border)',
+                      background: template === t.code ? 'var(--blue-glow)' : 'var(--bg-secondary)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, fontSize: '0.82rem', color: template === t.code ? 'var(--blue)' : 'var(--text-primary)', marginBottom: 2 }}>
+                      {t.displayName}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      {t.shotCount} shots
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {error && <div className="error-banner" style={{ marginBottom: 12 }}>{error}</div>}
 

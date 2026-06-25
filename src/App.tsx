@@ -28,6 +28,7 @@ const LearningInsights = lazy(() => import('./pages/LearningInsights'));
 const Products = lazy(() => import('./pages/Products'));
 const Orders = lazy(() => import('./pages/Orders'));
 const VideoGenerator = lazy(() => import('./pages/VideoGenerator'));
+const OAuthCallback = lazy(() => import('./pages/OAuthCallback'));
 
 function PageLoader() {
   return (
@@ -53,6 +54,7 @@ export default function App() {
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/platforms/callback" element={<OAuthCallback />} />
 
           {/* Protected dashboard layout */}
           <Route element={<AuthGuard><DashboardLayout /></AuthGuard>}>

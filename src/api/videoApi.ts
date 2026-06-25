@@ -25,17 +25,26 @@ export interface VideoScript {
   createdAt: string;
 }
 
+export interface VideoTemplateOption {
+  code: string;
+  displayName: string;
+  shotCount: number;
+}
+
 export interface GenerateVideoInput {
   topic: string;
   platformCode: string;
   contentType: string;
   style: string;
   durationSecs: number;
+  template?: string;
 }
 
 export const videoApi = {
   list: () =>
     http.get<VideoScript[]>('/video-scripts'),
+  listTemplates: () =>
+    http.get<VideoTemplateOption[]>('/video-scripts/templates'),
   generate: (input: GenerateVideoInput) =>
     http.post<VideoScript>('/video-scripts/generate', input),
   delete: (id: string) =>

@@ -15,10 +15,13 @@ export interface PlatformAccount {
 export const platformAccountApi = {
   list: () =>
     http.get<PlatformAccount[]>('/platform-accounts'),
-  connect: (platformCode: string) =>
-    http.post<{ oauthUrl: string }>('/platform-accounts', { platformCode }),
-  addMock: (platformCode: string, accountName: string, accountHandle: string) =>
-    http.post<PlatformAccount>('/platform-accounts/callback', { platformCode, accountName, accountHandle }),
+
+  /** Returns the real OAuth URL to redirect the user to, or an error message if not configured. */
+  getOAuthUrl: (platformCode: string) =>
+    http.get<{ oauthUrl: string | null; error: string | null }>(
+      `/oauth/${platformCode.toLowerCase()}/start`
+    ),
+
   disconnect: (id: string) =>
     http.delete<void>(`/platform-accounts/${id}`),
 };
