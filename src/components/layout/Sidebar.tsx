@@ -5,7 +5,7 @@ import {
   Megaphone, BarChart3, Bot, UserPlus,
   CreditCard, Zap, LogOut, User, ChevronUp, Globe,
   TrendingUp, Target, Brain, Wand2, CheckSquare, CalendarDays, Layers, X, FileText,
-  Package, ShoppingCart,
+  Package, ShoppingCart, Film,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { logout } from '../../api/httpClient';
@@ -33,6 +33,7 @@ const navItems = [
   ]},
   { section: 'Content', items: [
     { to: '/content-studio', icon: Wand2, label: 'Content Studio' },
+    { to: '/video-generator', icon: Film, label: 'Video Generator' },
     { to: '/approvals', icon: CheckSquare, label: 'Approvals' },
     { to: '/calendar', icon: CalendarDays, label: 'Calendar' },
   ]},

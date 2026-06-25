@@ -27,6 +27,7 @@ const PlatformIntegrations = lazy(() => import('./pages/PlatformIntegrations'));
 const LearningInsights = lazy(() => import('./pages/LearningInsights'));
 const Products = lazy(() => import('./pages/Products'));
 const Orders = lazy(() => import('./pages/Orders'));
+const VideoGenerator = lazy(() => import('./pages/VideoGenerator'));
 
 function PageLoader() {
   return (
@@ -76,6 +77,7 @@ export default function App() {
             <Route path="/learning"         element={<LearningInsights />} />
             <Route path="/products"         element={<Products />} />
             <Route path="/orders"           element={<Orders />} />
+            <Route path="/video-generator"  element={<VideoGenerator />} />
           </Route>
 
           {/* Default redirect */}

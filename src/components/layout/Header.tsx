@@ -23,6 +23,7 @@ const pageTitles: Record<string, string> = {
   '/documents': 'Document Control',
   '/products': 'Products',
   '/orders': 'WhatsApp Orders',
+  '/video-generator': 'Video Generator',
 };
 
 export default function Header() {
