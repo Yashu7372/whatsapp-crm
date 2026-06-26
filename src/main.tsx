@@ -4,7 +4,7 @@ import './index.css';
 import App from './App';
 
 async function bootstrap() {
-  if (import.meta.env.VITE_MOCK === 'true' || import.meta.env.DEV) {
+  if (import.meta.env.VITE_MOCK === 'true') {
     // Seed a mock auth token so AuthGuard passes without a real login
     if (!localStorage.getItem('accessToken')) {
       localStorage.setItem('accessToken', 'mock-token');

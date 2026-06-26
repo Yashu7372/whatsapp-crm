@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Share2, Plus, Trash2, AlertCircle, Instagram, Youtube } from 'lucide-react';
+import { Share2, Plus, Trash2, AlertCircle, Camera, Play } from 'lucide-react';
 import { http } from '../../api/httpClient';
 import { useFeatures } from '../../contexts/FeaturesContext';
 
@@ -13,8 +13,8 @@ interface SocialAccount {
 }
 
 const PLATFORM_ICONS: Record<string, React.ReactNode> = {
-  INSTAGRAM: <Instagram size={16} />,
-  YOUTUBE: <Youtube size={16} />,
+  INSTAGRAM: <Camera size={16} />,
+  YOUTUBE: <Play size={16} />,
 };
 
 export default function SocialAccountSettings() {

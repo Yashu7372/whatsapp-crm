@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Image, Upload, Trash2, Download, Search, AlertCircle } from 'lucide-react';
-import { storageApi, MediaAsset } from '../api/storageApi';
+import { storageApi, type MediaAsset } from '../api/storageApi';
 import { useFeatures } from '../contexts/FeaturesContext';
 
 export default function MediaLibrary() {

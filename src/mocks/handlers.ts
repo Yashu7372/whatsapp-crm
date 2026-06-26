@@ -186,6 +186,90 @@ export const handlers = [
   http.get('/api/v1/documents', () => HttpResponse.json(empty())),
   http.get('/api/v1/bookings', () => HttpResponse.json(empty())),
 
+  // Feature flags
+  http.get('/api/v1/me/features', () => HttpResponse.json({
+    tenantId: 'tenant-1',
+    plan: 'BUSINESS',
+    subscriptionStatus: 'TRIAL',
+    features: {
+      WHATSAPP_BOT: true, CRM_DASHBOARD: true, CAMPAIGNS: true,
+      DOCUMENT_CONTROL: true, ZERO_KNOWLEDGE_STORAGE: true, DOCUMENT_AI_ANALYZER: true,
+      AI_TREND_PICKER: true, AI_CONTENT_GENERATOR: true, MEDIA_LIBRARY: true,
+      VIDEO_TEMPLATE_ENGINE: true, SCHEDULED_PUBLISHING: true,
+      INSTAGRAM_PUBLISHING: true, YOUTUBE_PUBLISHING: true,
+      BYO_MEDIA_STORAGE: false, BYO_DOCUMENT_STORAGE: false, CUSTOMER_KMS: false,
+    },
+  })),
+  http.patch('/api/v1/me/features/:code', async ({ request }) => {
+    const b = await request.json() as { enabled: boolean };
+    return HttpResponse.json({ featureCode: 'UPDATED', enabled: b.enabled });
+  }),
+
+  // Media / Storage
+  http.get('/api/v1/media', () => HttpResponse.json([])),
+  http.post('/api/v1/storage/upload-url', () => HttpResponse.json({
+    uploadUrl: '/api/v1/storage/local-upload/mock-token',
+    uploadToken: 'mock-token',
+    objectKey: 'tenant-1/mock/file.bin',
+    expiresInSeconds: 900,
+  })),
+  http.post('/api/v1/storage/confirm-upload', async ({ request }) => {
+    const b = await request.json() as object;
+    return HttpResponse.json({ id: 'asset-mock', status: 'UPLOADED', ...b }, { status: 201 });
+  }),
+  http.get('/api/v1/storage/download-url/:id', () => HttpResponse.json({
+    downloadUrl: '#',
+    expiresInSeconds: 900,
+  })),
+  http.delete('/api/v1/media/:id', () => new HttpResponse(null, { status: 204 })),
+
+  // Social Accounts
+  http.get('/api/v1/social-accounts', () => HttpResponse.json([])),
+  http.post('/api/v1/social-accounts', async ({ request }) => {
+    const b = await request.json() as object;
+    return HttpResponse.json({ id: 'sa-mock', status: 'CONNECTED', createdAt: new Date().toISOString(), ...b }, { status: 201 });
+  }),
+  http.delete('/api/v1/social-accounts/:id', () => new HttpResponse(null, { status: 204 })),
+
+  // Video Templates
+  http.get('/api/v1/templates', () => HttpResponse.json([
+    { id: 'tmpl-1', name: 'Clean Reel', scope: 'SYSTEM', category: 'REEL', format: 'REEL_9_16', active: true },
+    { id: 'tmpl-2', name: 'Product Showcase', scope: 'SYSTEM', category: 'PRODUCT', format: 'REEL_9_16', active: true },
+    { id: 'tmpl-3', name: 'YouTube Intro', scope: 'SYSTEM', category: 'YOUTUBE', format: 'LANDSCAPE_16_9', active: true },
+  ])),
+  http.post('/api/v1/templates', async ({ request }) => {
+    const b = await request.json() as object;
+    return HttpResponse.json({ id: 'tmpl-new', scope: 'TENANT', active: true, ...b }, { status: 201 });
+  }),
+  http.patch('/api/v1/templates/:id', async ({ request }) => {
+    const b = await request.json() as object;
+    return HttpResponse.json(b);
+  }),
+
+  // Render Jobs
+  http.get('/api/v1/render-jobs', () => HttpResponse.json([])),
+  http.post('/api/v1/render-jobs', async ({ request }) => {
+    const b = await request.json() as object;
+    return HttpResponse.json({ id: 'render-mock', status: 'PENDING', createdAt: new Date().toISOString(), ...b }, { status: 201 });
+  }),
+
+  // Publishing Jobs
+  http.get('/api/v1/publishing-jobs', () => HttpResponse.json([])),
+  http.post('/api/v1/publishing-jobs', async ({ request }) => {
+    const b = await request.json() as object;
+    return HttpResponse.json({ id: 'pub-mock', status: 'SCHEDULED', createdAt: new Date().toISOString(), ...b }, { status: 201 });
+  }),
+  http.delete('/api/v1/publishing-jobs/:id', () => new HttpResponse(null, { status: 204 })),
+
+  // Auth
+  http.post('/api/v1/auth/login', async ({ request }) => {
+    const b = await request.json() as { email: string; password: string };
+    if (b.email && b.password) {
+      return HttpResponse.json({ accessToken: 'mock-token', refreshToken: 'mock-refresh', tenantId: 'tenant-1' });
+    }
+    return HttpResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+  }),
+
   // Legacy /api routes
   http.get('/api/workspace', () => HttpResponse.json({ id: 'ws-1', name: 'Dhad Digital', plan: 'PRO' })),
   http.get('/api/contacts', () => HttpResponse.json(mockContacts)),

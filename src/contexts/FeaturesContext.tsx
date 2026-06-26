@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { featuresApi, TenantFeatures } from '../api/featuresApi';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { featuresApi, type TenantFeatures } from '../api/featuresApi';
 import { isAuthenticated } from '../api/httpClient';
 
 interface FeaturesContextValue {

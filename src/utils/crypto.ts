@@ -10,7 +10,7 @@ export interface WrappedKeyResult {
 }
 
 function toBase64(buffer: Uint8Array): string {
-  return btoa(String.fromCharCode(...buffer));
+  return btoa(Array.from(buffer, b => String.fromCharCode(b)).join(''));
 }
 
 export async function encryptFile(file: File): Promise<EncryptedFileResult> {
@@ -40,8 +40,11 @@ export async function decryptFile(
   ivBase64: string,
 ): Promise<ArrayBuffer> {
   const iv = Uint8Array.from(atob(ivBase64), c => c.charCodeAt(0));
+  const keyBuffer = rawFileKey.buffer.slice(
+    rawFileKey.byteOffset, rawFileKey.byteOffset + rawFileKey.byteLength,
+  ) as ArrayBuffer;
   const cryptoKey = await crypto.subtle.importKey(
-    'raw', rawFileKey, { name: 'AES-GCM' }, false, ['decrypt'],
+    'raw', keyBuffer, { name: 'AES-GCM' }, false, ['decrypt'],
   );
   return crypto.subtle.decrypt({ name: 'AES-GCM', iv }, cryptoKey, ciphertext);
 }
