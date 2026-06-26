@@ -7,9 +7,9 @@ interface BottomNavProps {
 
 const navLinks = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
-  { to: '/inbox', icon: MessageSquare, label: 'Inbox' },
-  { to: '/contacts', icon: Users, label: 'Contacts' },
-  { to: '/campaigns', icon: Megaphone, label: 'Campaigns' },
+  { to: '/inbox',     icon: MessageSquare,   label: 'Inbox' },
+  { to: '/contacts',  icon: Users,           label: 'Contacts' },
+  { to: '/campaigns', icon: Megaphone,       label: 'Campaigns' },
 ];
 
 export default function BottomNav({ onMenuClick }: BottomNavProps) {
@@ -25,7 +25,7 @@ export default function BottomNav({ onMenuClick }: BottomNavProps) {
           <span>{label}</span>
         </NavLink>
       ))}
-      <button className="bottom-nav-item" onClick={onMenuClick} aria-label="Open menu">
+      <button className="bottom-nav-item" onClick={onMenuClick}>
         <Menu size={22} />
         <span>More</span>
       </button>
