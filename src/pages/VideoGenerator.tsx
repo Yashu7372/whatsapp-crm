@@ -19,6 +19,33 @@ function parseHashtags(raw: string): string[] {
 
 const canShare = typeof navigator !== 'undefined' && !!navigator.share;
 
+const SHARE_PLATFORMS = [
+  {
+    id: 'instagram', label: 'Instagram', color: '#E1306C', emoji: '📷',
+    getUrl: (_: string) => 'https://www.instagram.com/',
+    copyFirst: true,
+    hint: 'Caption copied! Tap +, record or upload, then paste in the caption field.',
+  },
+  {
+    id: 'tiktok', label: 'TikTok', color: '#FE2C55', emoji: '🎵',
+    getUrl: (_: string) => 'https://www.tiktok.com/',
+    copyFirst: true,
+    hint: 'Caption copied! Tap +, upload your video, then paste in the description.',
+  },
+  {
+    id: 'whatsapp', label: 'WhatsApp', color: '#25D366', emoji: '💬',
+    getUrl: (text: string) => `https://wa.me/?text=${encodeURIComponent(text)}`,
+    copyFirst: false,
+    hint: null,
+  },
+  {
+    id: 'twitter', label: 'X', color: '#1DA1F2', emoji: '🐦',
+    getUrl: (text: string) => `https://twitter.com/intent/tweet?text=${encodeURIComponent(text.slice(0, 280))}`,
+    copyFirst: false,
+    hint: null,
+  },
+] as const;
+
 function buildShareText(script: VideoScript, tags: string[]) {
   return [
     script.caption ?? script.title,
@@ -48,6 +75,7 @@ function buildFullText(script: VideoScript, tags: string[]) {
 function ScriptCard({ script, onDelete }: { script: VideoScript; onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [platformToast, setPlatformToast] = useState<string | null>(null);
   const shots = parseShotList(script.shotList);
   const tags = parseHashtags(script.hashtags);
 
@@ -60,11 +88,26 @@ function ScriptCard({ script, onDelete }: { script: VideoScript; onDelete: () =>
         // user dismissed the sheet — no-op
       }
     } else {
-      // Desktop fallback: copy full script to clipboard
       navigator.clipboard.writeText(buildFullText(script, tags)).then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       });
+    }
+  }
+
+  async function handlePlatformShare(platform: typeof SHARE_PLATFORMS[number]) {
+    const shareText = buildShareText(script, tags);
+    if (platform.copyFirst) {
+      try {
+        await navigator.clipboard.writeText(shareText);
+      } catch {
+        // clipboard may be unavailable on some browsers
+      }
+    }
+    window.open(platform.getUrl(shareText), '_blank', 'noopener,noreferrer');
+    if (platform.hint) {
+      setPlatformToast(platform.hint);
+      setTimeout(() => setPlatformToast(null), 5000);
     }
   }
 
@@ -180,18 +223,48 @@ function ScriptCard({ script, onDelete }: { script: VideoScript; onDelete: () =>
         )}
       </div>
 
-      {/* Share / Copy CTA */}
-      <button
-        onClick={handleShare}
-        className="btn btn-primary"
-        style={{ width: '100%', marginTop: 14, gap: 8 }}
-      >
-        {canShare
-          ? <><Share2 size={14} /> Share — Instagram, TikTok, WhatsApp…</>
-          : copied
-            ? <><Check size={14} /> Copied!</>
-            : <><Copy size={14} /> Copy Caption + Hashtags</>}
-      </button>
+      {/* Platform share grid */}
+      <div style={{ marginTop: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+          {SHARE_PLATFORMS.map((platform) => (
+            <button
+              key={platform.id}
+              onClick={() => handlePlatformShare(platform)}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: 4, padding: '10px 4px', borderRadius: 10, border: 'none',
+                background: platform.color + '22', cursor: 'pointer', transition: 'background 0.15s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = platform.color + '44')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = platform.color + '22')}
+              title={platform.copyFirst ? `Copy caption & open ${platform.label}` : `Share to ${platform.label}`}
+            >
+              <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>{platform.emoji}</span>
+              <span style={{ fontSize: '0.68rem', fontWeight: 600, color: platform.color }}>{platform.label}</span>
+            </button>
+          ))}
+        </div>
+        {platformToast && (
+          <div style={{
+            marginTop: 10, padding: '8px 12px', borderRadius: 8,
+            background: 'var(--accent)22', border: '1px solid var(--accent)44',
+            fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5,
+          }}>
+            {platformToast}
+          </div>
+        )}
+        <button
+          onClick={handleShare}
+          className="btn btn-ghost"
+          style={{ width: '100%', marginTop: 8, fontSize: '0.8rem', gap: 6 }}
+        >
+          {canShare
+            ? <><Share2 size={13} /> More apps…</>
+            : copied
+              ? <><Check size={13} color="var(--accent)" /> Copied!</>
+              : <><Copy size={13} /> Copy full script</>}
+        </button>
+      </div>
     </div>
   );
 }
