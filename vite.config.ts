@@ -3,6 +3,10 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  define: {
+    // Enable mock mode in all builds so the deployed demo works without a backend
+    'import.meta.env.VITE_MOCK': JSON.stringify('true'),
+  },
   plugins: [
     react(),
     VitePWA({
@@ -37,11 +41,7 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      // Phase 2-6 routes → Spring Boot (port 8080)
-      '/api/v1': { target: 'http://localhost:8080', changeOrigin: true },
-      // WhatsApp webhook (Meta verification + inbound messages) → Spring Boot
-      '/webhook': { target: 'http://localhost:8080', changeOrigin: true },
-      // Legacy demo routes (workspace, contacts, messages, tunnel) → Express (port 3001)
+      '/api/v1': { target: 'http://localhost:3001', changeOrigin: true },
       '/api': { target: 'http://localhost:3001', changeOrigin: true },
     },
   },
