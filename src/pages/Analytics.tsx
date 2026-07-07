@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Bot, Clock, Users, MessageSquare, TrendingUp } from 'lucide-react';
-import { api } from '../services/api';
+import { crmApi, type CrmStats } from '../api/crmApi';
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -16,12 +16,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function Analytics() {
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<CrmStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getStats().then(setStats).catch(console.error).finally(() => setLoading(false));
-    const interval = setInterval(() => api.getStats().then(setStats).catch(console.error), 15000);
+    crmApi.getStats().then(setStats).catch(console.error).finally(() => setLoading(false));
+    const interval = setInterval(() => crmApi.getStats().then(setStats).catch(console.error), 15000);
     return () => clearInterval(interval);
   }, []);
 

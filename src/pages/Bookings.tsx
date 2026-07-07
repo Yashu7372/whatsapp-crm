@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Clock, User, Calendar } from 'lucide-react';
-import { api } from '../services/api';
+import { crmApi, type CrmBooking } from '../api/crmApi';
 
 const statusStyle: Record<string, string> = {
   pending: 'orange', confirmed: 'green', cancelled: 'red', no_show: 'yellow',
@@ -10,17 +10,17 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function Bookings() {
   const [view, setView] = useState<'calendar' | 'list'>('calendar');
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<CrmBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const today = new Date();
 
   useEffect(() => {
-    api.getBookings()
+    crmApi.getBookings()
       .then(setBookings)
       .catch(console.error)
       .finally(() => setLoading(false));
-    const interval = setInterval(() => api.getBookings().then(setBookings).catch(console.error), 15000);
+    const interval = setInterval(() => crmApi.getBookings().then(setBookings).catch(console.error), 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -44,8 +44,8 @@ export default function Bookings() {
 
   const getBookingsForDay = (day: number, month: number) =>
     bookings.filter(b => {
-      if (!b.scheduled_at) return false;
-      const d = new Date(b.scheduled_at);
+      if (!b.scheduledAt) return false;
+      const d = new Date(b.scheduledAt);
       return d.getDate() === day && d.getMonth() === month;
     });
 
@@ -97,7 +97,7 @@ export default function Bookings() {
                       background: b.status === 'confirmed' ? 'var(--accent-glow)' : 'var(--orange-glow)',
                       color: b.status === 'confirmed' ? 'var(--accent)' : 'var(--orange)',
                     }}>
-                      {(b.contact_name || '?').split(' ')[0]} · {(b.service_type || 'Appt').split(' ')[0]}
+                      {(b.contactName || '?').split(' ')[0]} · {(b.serviceType || 'Appt').split(' ')[0]}
                     </div>
                   ))}
                   {dayBookings.length > 2 && (
@@ -121,17 +121,17 @@ export default function Bookings() {
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <User size={16} color="var(--text-muted)" />
-                        <span style={{ fontWeight: 600 }}>{b.contact_name || b.contact_id}</span>
+                        <span style={{ fontWeight: 600 }}>{b.contactName || b.id}</span>
                       </div>
                     </td>
-                    <td>{b.service_type || '—'}</td>
+                    <td>{b.serviceType || '—'}</td>
                     <td style={{ color: 'var(--text-secondary)' }}>
-                      {b.scheduled_at ? new Date(b.scheduled_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' +
-                        new Date(b.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      {b.scheduledAt ? new Date(b.scheduledAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' +
+                        new Date(b.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
                     </td>
                     <td>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-muted)' }}>
-                        <Clock size={13} /> {b.duration_mins || 30}min
+                        <Clock size={13} /> {b.durationMins || 30}min
                       </span>
                     </td>
                     <td><span className={`badge ${statusStyle[b.status] || 'gray'}`}>{b.status || 'pending'}</span></td>

@@ -1,24 +1,24 @@
 import { useState, useEffect } from 'react';
 import { Search, Filter, Download, MessageSquare, Tag, Globe } from 'lucide-react';
-import { api } from '../services/api';
+import { crmApi, type CrmContact } from '../api/crmApi';
 
 const langLabels: Record<string, string> = { en: 'English', ar: 'العربية', hi: 'हिंदी' };
 const avatarBgs = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626', '#0891b2', '#7c2d12', '#4f46e5'];
 
 export default function Contacts() {
-  const [contacts, setContacts] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<CrmContact[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getContacts().then(setContacts).catch(console.error).finally(() => setLoading(false));
-    const interval = setInterval(() => api.getContacts().then(setContacts).catch(console.error), 15000);
+    crmApi.getContacts().then(setContacts).catch(console.error).finally(() => setLoading(false));
+    const interval = setInterval(() => crmApi.getContacts().then(setContacts).catch(console.error), 15000);
     return () => clearInterval(interval);
   }, []);
 
   const filtered = contacts.filter(c =>
-    (c.name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (c.phone || '').includes(search)
+    (c.displayName || '').toLowerCase().includes(search.toLowerCase()) ||
+    (c.phoneNumber || '').includes(search)
   );
 
   if (loading) return <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>Loading contacts...</div>;
@@ -64,19 +64,19 @@ export default function Contacts() {
                           justifyContent: 'center', background: avatarBgs[i % avatarBgs.length],
                           fontWeight: 700, fontSize: '0.78rem', flexShrink: 0,
                         }}>
-                          {(contact.name || '??').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                          {(contact.displayName || '??').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                         </div>
-                        <span style={{ fontWeight: 600 }}>{contact.name || contact.wa_id}</span>
+                        <span style={{ fontWeight: 600 }}>{contact.displayName || contact.waId}</span>
                       </div>
                     </td>
-                    <td style={{ color: 'var(--text-secondary)', fontFamily: 'monospace', fontSize: '0.82rem' }}>{contact.phone || contact.wa_id}</td>
+                    <td style={{ color: 'var(--text-secondary)', fontFamily: 'monospace', fontSize: '0.82rem' }}>{contact.phoneNumber || contact.waId}</td>
                     <td>
                       <span className="badge blue" style={{ gap: 4 }}>
                         <Globe size={11} /> {langLabels[contact.language] || contact.language || 'Unknown'}
                       </span>
                     </td>
                     <td style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-                      {contact.last_seen_at ? new Date(contact.last_seen_at).toLocaleDateString() : '—'}
+                      {contact.lastSeenAt ? new Date(contact.lastSeenAt).toLocaleDateString() : '—'}
                     </td>
                   </tr>
                 ))}

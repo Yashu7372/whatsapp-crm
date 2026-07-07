@@ -4,17 +4,8 @@ import {
   Play, Square, RefreshCw, AlertTriangle, Shield, Zap, ArrowRight,
   Terminal, Link
 } from 'lucide-react';
-import { api } from '../../services/api';
 import { http } from '../../api/httpClient';
-
-type TunnelStatus = 'idle' | 'starting' | 'active' | 'error';
-
-interface TunnelState {
-  status: TunnelStatus;
-  tunnelUrl: string | null;
-  webhookUrl: string | null;
-  error: string | null;
-}
+import { tunnelApi, type TunnelState, type TunnelStatus } from '../../api/tunnelApi';
 
 interface WebhookConfig {
   webhookPath: string;
@@ -32,7 +23,7 @@ export default function WebhookSetup() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    api.getTunnelStatus().then(setTunnel).catch(console.error);
+    tunnelApi.getStatus().then(setTunnel).catch(console.error);
     // Verify token and webhook path come from Spring Boot
     http.get<WebhookConfig>('/webhook/config').then(setWebhookConfig).catch(console.error);
   }, []);
@@ -41,7 +32,7 @@ export default function WebhookSetup() {
     if (tunnel.status === 'starting') {
       setPolling(true);
       pollRef.current = setInterval(async () => {
-        const data = await api.getTunnelStatus().catch(() => null);
+        const data = await tunnelApi.getStatus().catch(() => null);
         if (data) {
           setTunnel(data);
           if (data.status === 'active' || data.status === 'error' || data.status === 'idle') {
@@ -59,12 +50,12 @@ export default function WebhookSetup() {
 
   const handleStart = async () => {
     setTunnel(t => ({ ...t, status: 'starting', error: null }));
-    await api.startTunnel().catch(console.error);
+    await tunnelApi.start().catch(console.error);
     // Polling will pick up the URL
   };
 
   const handleStop = async () => {
-    await api.stopTunnel().catch(console.error);
+    await tunnelApi.stop().catch(console.error);
     setTunnel(t => ({ ...t, status: 'idle', tunnelUrl: null, webhookUrl: null }));
   };
 

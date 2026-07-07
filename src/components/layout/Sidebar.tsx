@@ -7,7 +7,8 @@ import {
   Globe, X, Wifi, WifiOff, FileText, Image,
   TrendingUp, Video, Clock, HardDrive, Share2,
 } from 'lucide-react';
-import { api } from '../../services/api';
+import { crmApi, type Workspace } from '../../api/crmApi';
+import { logout } from '../../api/httpClient';
 import { useFeatures } from '../../contexts/FeaturesContext';
 
 interface SidebarProps {
@@ -17,21 +18,21 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const navigate = useNavigate();
-  const [workspace, setWorkspace] = useState<any>(null);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { isEnabled } = useFeatures();
 
   useEffect(() => {
-    api.getWorkspace().then(setWorkspace).catch(() => {});
+    crmApi.getWorkspace().then(setWorkspace).catch(() => {});
   }, []);
 
   const handleLogout = () => {
     setShowUserMenu(false);
-    navigate('/onboarding');
+    logout();
   };
 
   const initial = workspace?.name?.[0]?.toUpperCase() ?? '?';
-  const isConnected = workspace?.whatsapp_connected;
+  const isConnected = workspace?.whatsappConnected;
 
   return (
     <aside className={`sidebar${isOpen ? ' open' : ''}`}>

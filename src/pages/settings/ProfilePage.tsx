@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { User, Save, LogOut, Zap, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../../services/api';
+import { crmApi, type Workspace } from '../../api/crmApi';
+import { logout } from '../../api/httpClient';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const [workspace, setWorkspace] = useState<any>(null);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [name, setName] = useState('');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    api.getWorkspace().then((w) => {
+    crmApi.getWorkspace().then((w) => {
       setWorkspace(w);
       setName(w.name || '');
     }).catch(console.error);
@@ -18,15 +19,14 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     try {
-      await api.updateWorkspace({ name });
+      await crmApi.updateWorkspace({ name });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e) { console.error(e); }
   };
 
   const handleLogout = () => {
-    // Clear any local state/session and redirect to onboarding
-    navigate('/onboarding');
+    logout();
   };
 
   return (
@@ -68,7 +68,7 @@ export default function ProfilePage() {
             </span>
             <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
               Webhook Token: <code style={{ background: 'var(--bg-primary)', padding: '2px 6px', borderRadius: 4, fontSize: '0.78rem' }}>
-                {workspace?.webhook_verify_token || '—'}
+                {workspace?.webhookVerifyToken || '—'}
               </code>
             </span>
           </div>
@@ -89,15 +89,15 @@ export default function ProfilePage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
             width: 10, height: 10, borderRadius: '50%',
-            background: workspace?.whatsapp_connected ? 'var(--accent)' : 'var(--red)',
+            background: workspace?.whatsappConnected ? 'var(--accent)' : 'var(--red)',
           }} />
           <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>
-            {workspace?.whatsapp_connected ? 'Connected' : 'Not Connected'}
+            {workspace?.whatsappConnected ? 'Connected' : 'Not Connected'}
           </span>
-          {workspace?.whatsapp_number && (
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{workspace.whatsapp_number}</span>
+          {workspace?.whatsappNumber && (
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{workspace.whatsappNumber}</span>
           )}
-          {!workspace?.whatsapp_connected && (
+          {!workspace?.whatsappConnected && (
             <button className="btn btn-secondary btn-sm" onClick={() => navigate('/settings/bot')}>Configure</button>
           )}
         </div>
