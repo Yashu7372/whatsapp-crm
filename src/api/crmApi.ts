@@ -47,6 +47,15 @@ export interface CrmConversation {
   unreadCount: number;
   lastMessage: string | null;
   lastMessageAt: string | null;
+  assignedAgentId: string | null;
+  assignedAgentName: string | null;
+}
+
+export interface CrmAgent {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
 }
 
 export interface CrmMessage {
@@ -104,6 +113,12 @@ export const crmApi = {
 
   sendMessage: (conversationId: string, message: string) =>
     http.post<CrmMessage>(`/crm/conversations/${conversationId}/send`, { message }),
+
+  getAgents: () =>
+    http.get<CrmAgent[]>('/crm/agents'),
+
+  assignConversation: (conversationId: string, agentId: string) =>
+    http.post<CrmConversation>(`/crm/conversations/${conversationId}/assign`, { agentId }),
 
   getContacts: () =>
     http.get<CrmContact[]>('/crm/contacts'),

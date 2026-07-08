@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send, Paperclip, MoreVertical, Phone, Bot, UserCheck, AlertTriangle } from 'lucide-react';
-import { crmApi, type CrmConversation, type CrmMessage } from '../api/crmApi';
+import { crmApi, type CrmAgent, type CrmConversation, type CrmMessage } from '../api/crmApi';
 
 const avatarBgs = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626', '#0891b2', '#7c2d12', '#4f46e5'];
 
@@ -17,6 +17,7 @@ function timeAgo(dateStr: string) {
 
 export default function Inbox() {
   const [conversations, setConversations] = useState<CrmConversation[]>([]);
+  const [agents, setAgents] = useState<CrmAgent[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<CrmMessage[]>([]);
   const [input, setInput] = useState('');
@@ -37,6 +38,7 @@ export default function Inbox() {
       finally { setLoading(false); }
     }
     load();
+    crmApi.getAgents().then(setAgents).catch(console.error);
     const interval = setInterval(load, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -78,6 +80,13 @@ export default function Inbox() {
   const handleHandoff = async (status: 'bot' | 'human') => {
     if (!activeConvId) return;
     await crmApi.updateConversationStatus(activeConvId, status);
+    const convs = await crmApi.getConversations();
+    setConversations(convs);
+  };
+
+  const handleAssign = async (agentId: string) => {
+    if (!activeConvId || !agentId) return;
+    await crmApi.assignConversation(activeConvId, agentId);
     const convs = await crmApi.getConversations();
     setConversations(convs);
   };
@@ -161,7 +170,22 @@ export default function Inbox() {
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {activeConv.status === 'human' && agents.length > 0 && (
+                  <select
+                    value={activeConv.assignedAgentId ?? ''}
+                    onChange={(e) => handleAssign(e.target.value)}
+                    style={{
+                      padding: '6px 10px', borderRadius: 8, fontSize: '0.8rem',
+                      background: 'var(--bg-card)', color: 'var(--text)', border: '1px solid var(--border)',
+                    }}
+                  >
+                    <option value="" disabled>Assign to agent…</option>
+                    {agents.map(a => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                )}
                 {activeConv.status === 'bot' ? (
                   <button className="btn btn-sm btn-secondary" onClick={() => handleHandoff('human')}>
                     <UserCheck size={14} /> Take Over
@@ -180,7 +204,10 @@ export default function Inbox() {
                 display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', color: 'var(--yellow)',
               }}>
                 <AlertTriangle size={16} />
-                <span><strong>Human mode</strong> — Bot is paused. You're replying directly to the customer.</span>
+                <span>
+                  <strong>Human mode</strong> — Bot is paused. You're replying directly to the customer.
+                  {activeConv.assignedAgentName && <> Assigned to <strong>{activeConv.assignedAgentName}</strong>.</>}
+                </span>
               </div>
             )}
 

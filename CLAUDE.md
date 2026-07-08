@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-The frontend dashboard and mobile app for the WhatsApp AI CRM platform. React 19 + TypeScript (Vite), deployed as a PWA and packaged as iOS/Android apps via Capacitor. It also contains a legacy Express.js server that is being phased out in favour of the Spring Boot backend.
+The frontend dashboard and mobile app for the WhatsApp AI CRM platform. React 19 + TypeScript (Vite), deployed as a PWA and packaged as iOS/Android apps via Capacitor. All API traffic goes to the Spring Boot backend (`whatsapp-bot` repo) — the legacy Express.js server has been fully removed.
 
 ---
 
@@ -22,19 +22,17 @@ The frontend dashboard and mobile app for the WhatsApp AI CRM platform. React 19
 | Icons | Lucide React |
 | HTTP | Axios |
 | Testing | MSW 2 (mock service worker), Playwright |
-| Legacy backend | Express 5 + better-sqlite3 (SQLite at `data/crm.db`) |
+| Backend | Spring Boot (`whatsapp-bot` repo) — reached via `/api/v1/*` |
 
 ---
 
 ## Commands
 
 ```bash
-npm install                     # Install all deps (frontend + server)
+npm install                     # Install dependencies
 
 # Development
-npm run dev                     # Vite only — port 5173, all API proxied to Spring Boot :8080
-npm run server:dev              # Express legacy server only — port 3001, tsx watch
-npm run dev:all                 # Both concurrently
+npm run dev                     # Vite dev server — port 5173, all API proxied to Spring Boot :8080
 
 # Production build
 npm run build                   # tsc -b && vite build → dist/
@@ -60,14 +58,11 @@ In **dev mode** (Vite dev server), all API calls go to Spring Boot:
 server: {
   proxy: {
     '/api/v1': { target: 'http://localhost:8080', changeOrigin: true },
-    '/api':    { target: 'http://localhost:8080', changeOrigin: true },
   },
 }
 ```
 
-Both prefixes point to Spring Boot (`localhost:8080`). The Express server on port 3001 is **not reached by the frontend in dev mode**.
-
-In **Docker/production** (nginx serves the built dist/), routing splits differently — see root `docker-compose.yml`. The Express server still runs there as a legacy service.
+In **Docker/production**, nginx serves the built `dist/` and proxies `/api/v1/*` and `/webhook` to the Spring Boot service (`nginx.conf`). There is no other backend.
 
 ---
 
@@ -127,59 +122,36 @@ After every `npm run build`, run `npm run cap:sync` to push web code into the na
 
 ---
 
-## Legacy Express server
+## Backend API (Spring Boot)
 
-Located in `server/src/`. Still deployed as a Docker container in `docker-compose.yml` but **not reachable from the frontend in dev mode** (Vite proxies to Spring Boot instead).
+Everything the dashboard needs is served by the Spring Boot backend in the `whatsapp-bot` repo:
 
-### What it still handles (Docker only, via nginx `/api/*`)
-
-| Route | Description |
+| Route family | Description |
 |---|---|
-| `GET /api/workspace` | Single-workspace config (SQLite) |
-| `PUT /api/workspace` | Update workspace settings |
-| `GET /api/stats` | Dashboard counts from SQLite |
-| `GET /api/conversations` | Conversations list from SQLite |
-| `GET /api/conversations/:id/messages` | Message history |
-| `PUT /api/conversations/:id/status` | Update status (`bot`/`human`/`closed`) |
-| `POST /api/conversations/:id/send` | Agent manual reply (calls Meta Graph API) |
-| `GET /api/contacts` | Contacts list |
-| `GET /api/bookings` | Bookings list |
-| `GET /webhook` | Meta webhook verification |
-| `POST /webhook` | Inbound messages → Gemini reply (separate from Spring flow) |
+| `POST /api/v1/auth/login`, `/refresh` | JWT auth (`tenant_users` table) |
+| `GET/PUT /api/v1/crm/workspace` | Tenant workspace settings |
+| `GET /api/v1/crm/stats` | Dashboard counts |
+| `GET /api/v1/crm/conversations` (+ `/{id}`, `/{id}/messages`) | Inbox |
+| `PUT /api/v1/crm/conversations/{id}/status` | Handover: `bot` / `human` / `closed` |
+| `POST /api/v1/crm/conversations/{id}/assign` | Assign an agent/employee |
+| `POST /api/v1/crm/conversations/{id}/send` | Agent manual reply (Meta Graph API) |
+| `GET /api/v1/crm/agents` | Active agents for assignment |
+| `GET /api/v1/crm/contacts`, `/bookings` | Contacts and bookings |
+| `GET/POST /webhook` | Meta webhook verification + inbound messages |
 
-### SQLite schema (`data/crm.db`)
-
-Tables: `workspaces`, `contacts`, `conversations`, `messages`, `bookings`
-
-This is a single-workspace system with no multi-tenant isolation. New features should go into Spring Boot, not the Express server.
-
-### Express server files
-
-```
-server/src/
-├── index.ts              App entry, CORS, port config, graceful shutdown
-├── routes/
-│   ├── api.ts            CRM REST endpoints (workspace, contacts, convs, bookings)
-│   ├── webhook.ts        WhatsApp inbound handler → Gemini → reply
-│   └── tunnel.ts         Cloudflare tunnel management
-├── services/
-│   ├── whatsapp.ts       Meta Graph API calls (send text + button messages)
-│   └── geminiEngine.ts   Google Generative AI SDK integration
-└── db/database.ts        better-sqlite3 init, schema, seed data
-```
+All routes except `/webhook` and `/api/v1/auth/*` require a JWT Bearer token; every query is tenant-scoped server-side.
 
 ---
 
 ## Environment variables
 
-**`.env` (frontend build + Express server):**
+**`.env` (frontend build):**
 
 | Variable | Purpose |
 |---|---|
-| `GEMINI_API_KEY` | Google AI Studio key — used by Express `geminiEngine.ts` |
-| `PORT` | Express server port (default: 3001) |
+| `VITE_MOCK` | `true` = run the dashboard against MSW mock handlers with no backend |
 
-The frontend itself (React) has no runtime env vars at build time — it calls `localhost:8080` (via proxy in dev) or the relative `/api/v1` path (in production).
+The frontend has no other runtime env vars — it calls `localhost:8080` (via the Vite proxy in dev) or the relative `/api/v1` path (in production).
 
 ---
 
@@ -188,7 +160,6 @@ The frontend itself (React) has no runtime env vars at build time — it calls `
 | Dockerfile | What it builds |
 |---|---|
 | `Dockerfile` | nginx serving the Vite `dist/` (static PWA) |
-| `Dockerfile.server` | Express server with better-sqlite3 native build |
 | `Dockerfile.android` | Android APK builder: npm install → build → cap sync → Gradle assembleDebug |
 | `Dockerfile.mobile` | React web app variant for mobile context |
 
