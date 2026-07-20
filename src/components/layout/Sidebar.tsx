@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, MessageSquare, Users, Calendar,
   Megaphone, BarChart3, Bot, UserPlus,
-  CreditCard, Zap, LogOut, User, ChevronUp, Globe
+  CreditCard, Zap, LogOut, User, ChevronUp, Globe, Sparkles
 } from 'lucide-react';
 import { api } from '../../services/api';
 
@@ -16,6 +16,7 @@ const navItems = [
   ]},
   { section: 'Marketing', items: [
     { to: '/campaigns', icon: Megaphone, label: 'Campaigns' },
+    { to: '/content-studio', icon: Sparkles, label: 'AI Content Studio' },
     { to: '/analytics', icon: BarChart3, label: 'Analytics' },
   ]},
   { section: 'Settings', items: [
