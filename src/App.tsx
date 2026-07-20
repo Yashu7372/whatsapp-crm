@@ -2,12 +2,12 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import DashboardLayout from './components/layout/DashboardLayout';
 
-/* Lazy-loaded pages for optimal code splitting */
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Inbox = lazy(() => import('./pages/Inbox'));
 const Contacts = lazy(() => import('./pages/Contacts'));
 const Bookings = lazy(() => import('./pages/Bookings'));
 const Campaigns = lazy(() => import('./pages/Campaigns'));
+const ContentStudio = lazy(() => import('./pages/ContentStudio'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const BotSettings = lazy(() => import('./pages/settings/BotSettings'));
 const TeamSettings = lazy(() => import('./pages/settings/TeamSettings'));
@@ -37,16 +37,15 @@ export default function App() {
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          {/* Onboarding (no sidebar) */}
           <Route path="/onboarding" element={<Onboarding />} />
 
-          {/* Dashboard layout with sidebar */}
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/inbox" element={<Inbox />} />
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/bookings" element={<Bookings />} />
             <Route path="/campaigns" element={<Campaigns />} />
+            <Route path="/content-studio" element={<ContentStudio />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/settings/bot" element={<BotSettings />} />
             <Route path="/settings/team" element={<TeamSettings />} />
@@ -55,7 +54,6 @@ export default function App() {
             <Route path="/profile" element={<ProfilePage />} />
           </Route>
 
-          {/* Default redirect */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Suspense>
