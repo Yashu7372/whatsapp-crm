@@ -8,6 +8,7 @@ const Inbox = lazy(() => import('./pages/Inbox'));
 const Contacts = lazy(() => import('./pages/Contacts'));
 const Bookings = lazy(() => import('./pages/Bookings'));
 const Campaigns = lazy(() => import('./pages/Campaigns'));
+const ContentStudio = lazy(() => import('./pages/ContentStudio'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const BotSettings = lazy(() => import('./pages/settings/BotSettings'));
 const TeamSettings = lazy(() => import('./pages/settings/TeamSettings'));
@@ -47,6 +48,7 @@ export default function App() {
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/bookings" element={<Bookings />} />
             <Route path="/campaigns" element={<Campaigns />} />
+            <Route path="/content-studio" element={<ContentStudio />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/settings/bot" element={<BotSettings />} />
             <Route path="/settings/team" element={<TeamSettings />} />
