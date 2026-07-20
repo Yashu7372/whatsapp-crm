@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, MessageSquare, Users, Calendar,
   Megaphone, BarChart3, Bot, UserPlus,
-  CreditCard, Zap, LogOut, User, ChevronUp, Globe
+  CreditCard, Zap, LogOut, User, ChevronUp, Globe, Clapperboard,
 } from 'lucide-react';
 import { api } from '../../services/api';
 
@@ -16,6 +16,7 @@ const navItems = [
   ]},
   { section: 'Marketing', items: [
     { to: '/campaigns', icon: Megaphone, label: 'Campaigns' },
+    { to: '/content-studio', icon: Clapperboard, label: 'AI Content Studio' },
     { to: '/analytics', icon: BarChart3, label: 'Analytics' },
   ]},
   { section: 'Settings', items: [
@@ -36,6 +37,8 @@ export default function Sidebar() {
   }, []);
 
   const handleLogout = () => {
+    localStorage.removeItem('whatsapp_bot_access_token');
+    localStorage.removeItem('whatsapp_bot_refresh_token');
     setShowUserMenu(false);
     navigate('/onboarding');
   };
@@ -71,22 +74,18 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* WhatsApp connection status indicator */}
       <div style={{
-        padding: '10px 16px',
-        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8,
         fontSize: '0.75rem', color: isConnected ? 'var(--accent)' : 'var(--orange)',
         borderTop: '1px solid var(--border)',
       }}>
         <span style={{
           width: 7, height: 7, borderRadius: '50%',
-          background: isConnected ? 'var(--accent)' : 'var(--orange)',
-          flexShrink: 0,
+          background: isConnected ? 'var(--accent)' : 'var(--orange)', flexShrink: 0,
         }} />
         {isConnected ? 'WhatsApp Connected' : 'WhatsApp Not Connected'}
       </div>
 
-      {/* User Footer with dropdown */}
       <div style={{ position: 'relative', borderTop: '1px solid var(--border)' }}>
         {showUserMenu && (
           <div style={{
@@ -97,27 +96,13 @@ export default function Sidebar() {
           }}>
             <button
               onClick={() => { setShowUserMenu(false); navigate('/profile'); }}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                padding: '9px 12px', borderRadius: 'var(--radius-xs)',
-                background: 'none', border: 'none', color: 'var(--text-secondary)',
-                fontSize: '0.85rem', cursor: 'pointer', transition: 'all var(--transition)',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-card-hover)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+              style={menuButtonStyle}
             >
               <User size={16} /> View Profile
             </button>
             <button
               onClick={handleLogout}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                padding: '9px 12px', borderRadius: 'var(--radius-xs)',
-                background: 'none', border: 'none', color: 'var(--red)',
-                fontSize: '0.85rem', cursor: 'pointer', transition: 'all var(--transition)',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--red-glow)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+              style={{ ...menuButtonStyle, color: 'var(--red)' }}
             >
               <LogOut size={16} /> Sign Out
             </button>
@@ -158,3 +143,10 @@ export default function Sidebar() {
     </aside>
   );
 }
+
+const menuButtonStyle = {
+  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+  padding: '9px 12px', borderRadius: 'var(--radius-xs)',
+  background: 'none', border: 'none', color: 'var(--text-secondary)',
+  fontSize: '0.85rem', cursor: 'pointer', transition: 'all var(--transition)',
+} as const;
