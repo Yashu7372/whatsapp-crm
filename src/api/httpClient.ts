@@ -68,6 +68,26 @@ async function upload<T>(path: string, formData: FormData): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function blob(path: string): Promise<Blob> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  let res = await fetch(`${BASE_URL}${path}`, { headers });
+  if (res.status === 401 && await tryRefresh()) {
+    const retryToken = getToken();
+    const retryHeaders: Record<string, string> = {};
+    if (retryToken) retryHeaders.Authorization = `Bearer ${retryToken}`;
+    res = await fetch(`${BASE_URL}${path}`, { headers: retryHeaders });
+  }
+  if (res.status === 401) {
+    window.location.href = '/login';
+    throw new Error('Session expired');
+  }
+  if (!res.ok) throw new Error(`API error ${res.status}: ${path}`);
+  return res.blob();
+}
+
 export const http = {
   get:    <T>(path: string) => request<T>(path),
   post:   <T>(path: string, body: unknown) => request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
@@ -75,6 +95,7 @@ export const http = {
   patch:  <T>(path: string, body: unknown) => request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
   upload,
+  blob,
 };
 
 export function isAuthenticated(): boolean {
