@@ -1,14 +1,21 @@
-import { useEffect, useState } from 'react';
-import { Film, Sparkles, Trash2, ChevronDown, ChevronUp, Music, Hash, Clock, Copy, Check, Layers, Share2 } from 'lucide-react';
-import { videoApi, type VideoScript, type GenerateVideoInput, type VideoTemplateOption } from '../api/videoApi';
+import { useEffect, useRef, useState } from 'react';
+import { Film, Sparkles, Trash2, ChevronDown, ChevronUp, Music, Hash, Clock, Copy, Check, Layers, Share2, Clapperboard, CircleAlert, UserRound, ImagePlus } from 'lucide-react';
+import { videoApi, type VideoScript, type GenerateVideoInput, type VideoTemplateOption, type VideoRenderJob, type ShotItem } from '../api/videoApi';
+import {
+  storyboardApi,
+  type CharacterProfile,
+  type StoryboardImageJob,
+  type StoryboardProviderStatus,
+  type StoryboardQualityMode,
+} from '../api/storyboardApi';
 
 const PLATFORMS = ['INSTAGRAM', 'TIKTOK', 'YOUTUBE', 'FACEBOOK', 'LINKEDIN', 'TWITTER', 'WHATSAPP'];
 const CONTENT_TYPES = ['REEL', 'SHORT', 'STORY', 'POST', 'ARTICLE'];
 const STYLES = ['ENGAGING', 'EDUCATIONAL', 'ENTERTAINING', 'INSPIRATIONAL', 'PROMOTIONAL', 'STORYTELLING', 'TUTORIAL', 'BEHIND_THE_SCENES'];
 const DURATIONS = [15, 30, 60, 90, 120, 180, 300];
 
-function parseShotList(raw: string): any[] {
-  try { const parsed = JSON.parse(raw); return Array.isArray(parsed) ? parsed : []; }
+function parseShotList(raw: string): ShotItem[] {
+  try { const parsed: unknown = JSON.parse(raw); return Array.isArray(parsed) ? parsed as ShotItem[] : []; }
   catch { return []; }
 }
 
@@ -22,13 +29,13 @@ const canShare = typeof navigator !== 'undefined' && !!navigator.share;
 const SHARE_PLATFORMS = [
   {
     id: 'instagram', label: 'Instagram', color: '#E1306C', emoji: '📷',
-    getUrl: (_: string) => 'https://www.instagram.com/',
+    getUrl: (text: string) => { void text; return 'https://www.instagram.com/'; },
     copyFirst: true,
     hint: 'Caption copied! Tap +, record or upload, then paste in the caption field.',
   },
   {
     id: 'tiktok', label: 'TikTok', color: '#FE2C55', emoji: '🎵',
-    getUrl: (_: string) => 'https://www.tiktok.com/',
+    getUrl: (text: string) => { void text; return 'https://www.tiktok.com/'; },
     copyFirst: true,
     hint: 'Caption copied! Tap +, upload your video, then paste in the description.',
   },
@@ -72,12 +79,277 @@ function buildFullText(script: VideoScript, tags: string[]) {
   ].join('\n');
 }
 
-function ScriptCard({ script, onDelete }: { script: VideoScript; onDelete: () => void }) {
+function CharacterLibrary({
+  characters,
+  onChanged,
+}: {
+  characters: CharacterProfile[];
+  onChanged: () => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [visualStyle, setVisualStyle] = useState('cinematic photorealistic');
+  const [files, setFiles] = useState<File[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleCreate(event: React.FormEvent) {
+    event.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const profile = await storyboardApi.createCharacter({
+        name: name.trim(),
+        description: description.trim(),
+        visualStyle: visualStyle.trim(),
+      });
+      for (const file of files.slice(0, 5)) {
+        await storyboardApi.uploadCharacterReference(profile.id, file);
+      }
+      setName('');
+      setDescription('');
+      setFiles([]);
+      setOpen(false);
+      await onChanged();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to create character');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 24 }}>
+      <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <UserRound size={16} color="var(--purple)" /> Character Library
+          </h3>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: 4 }}>
+            Reuse up to five reference images to keep one character consistent across shots.
+          </div>
+        </div>
+        <button className="btn btn-ghost" onClick={() => setOpen((value) => !value)}>
+          <ImagePlus size={14} /> New character
+        </button>
+      </div>
+
+      {characters.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: open ? 16 : 0 }}>
+          {characters.map((character) => (
+            <div key={character.id} style={{ padding: '8px 11px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--bg-primary)' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700 }}>{character.name}</div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                {character.references.length} reference{character.references.length === 1 ? '' : 's'} · {character.visualStyle || 'default style'}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {characters.length === 0 && !open && (
+        <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+          Add a character before generating consistent storyboard images.
+        </div>
+      )}
+
+      {open && (
+        <form onSubmit={handleCreate} style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 10 }}>
+            <div>
+              <label className="form-label">Character name *</label>
+              <input className="form-input" value={name} onChange={(event) => setName(event.target.value)} placeholder="Main presenter" required />
+            </div>
+            <div>
+              <label className="form-label">Visual style</label>
+              <input className="form-input" value={visualStyle} onChange={(event) => setVisualStyle(event.target.value)} placeholder="cinematic photorealistic" />
+            </div>
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label className="form-label">Identity description</label>
+            <input className="form-input" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Hair, clothing, age range, distinguishing features…" />
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label className="form-label">Reference images (maximum 5)</label>
+            <input
+              className="form-input"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+              onChange={(event) => setFiles(Array.from(event.target.files ?? []).slice(0, 5))}
+            />
+          </div>
+          {error && <div className="error-banner" style={{ marginTop: 10 }}>{error}</div>}
+          <button type="submit" className="btn btn-primary" disabled={saving || !name.trim()} style={{ marginTop: 12 }}>
+            {saving ? <><div className="spinner" style={{ width: 13, height: 13, borderWidth: 2 }} /> Saving…</> : <><UserRound size={14} /> Save character</>}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+function ScriptCard({
+  script,
+  characters,
+  providerStatus,
+  onDelete,
+}: {
+  script: VideoScript;
+  characters: CharacterProfile[];
+  providerStatus: StoryboardProviderStatus | null;
+  onDelete: () => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [platformToast, setPlatformToast] = useState<string | null>(null);
+  const [renderJob, setRenderJob] = useState<VideoRenderJob | null>(null);
+  const [rendering, setRendering] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [renderError, setRenderError] = useState<string | null>(null);
+  const [imageJobs, setImageJobs] = useState<StoryboardImageJob[]>([]);
+  const [selectedCharacterId, setSelectedCharacterId] = useState('');
+  const [qualityMode, setQualityMode] = useState<StoryboardQualityMode>('BALANCED');
+  const [reelBudget, setReelBudget] = useState(1);
+  const [generatingShot, setGeneratingShot] = useState<number | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
+  const imageUrlsRef = useRef<Record<string, string>>({});
+  const loadingAssetsRef = useRef<Set<string>>(new Set());
   const shots = parseShotList(script.shotList);
   const tags = parseHashtags(script.hashtags);
+  const renderJobId = renderJob?.id;
+  const renderStatus = renderJob?.status;
+  const hasActiveImageJobs = imageJobs.some((job) => ['QUEUED', 'GENERATING'].includes(job.status));
+
+  useEffect(() => {
+    let active = true;
+    videoApi.listRenderJobs(script.id)
+      .then((jobs) => {
+        if (active && jobs.length > 0) setRenderJob(jobs[0]);
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [script.id]);
+
+  useEffect(() => {
+    if (!renderJobId || !renderStatus || !['QUEUED', 'RENDERING'].includes(renderStatus)) return;
+    const timer = window.setInterval(() => {
+      videoApi.getRenderJob(renderJobId)
+        .then(setRenderJob)
+        .catch((error: Error) => setRenderError(error.message));
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [renderJobId, renderStatus]);
+
+  useEffect(() => {
+    if (renderStatus !== 'COMPLETED' || !renderJobId || videoUrl) return;
+    let active = true;
+    videoApi.getRenderedVideo(renderJobId)
+      .then((blob) => {
+        if (active) setVideoUrl(URL.createObjectURL(blob));
+      })
+      .catch((error: Error) => setRenderError(error.message));
+    return () => { active = false; };
+  }, [renderJobId, renderStatus, videoUrl]);
+
+  useEffect(() => () => {
+    if (videoUrl) URL.revokeObjectURL(videoUrl);
+  }, [videoUrl]);
+
+  useEffect(() => {
+    let active = true;
+    storyboardApi.listImages(script.id)
+      .then((jobs) => {
+        if (active) setImageJobs(jobs);
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [script.id]);
+
+  useEffect(() => {
+    if (!hasActiveImageJobs) return;
+    const timer = window.setInterval(() => {
+      storyboardApi.listImages(script.id)
+        .then(setImageJobs)
+        .catch((cause: Error) => setImageError(cause.message));
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [hasActiveImageJobs, script.id]);
+
+  useEffect(() => {
+    for (const job of imageJobs) {
+      if (job.status !== 'COMPLETED'
+          || !job.outputAssetId
+          || imageUrlsRef.current[job.id]
+          || loadingAssetsRef.current.has(job.id)) {
+        continue;
+      }
+      loadingAssetsRef.current.add(job.id);
+      storyboardApi.getAsset(job.outputAssetId)
+        .then((blob) => {
+          const url = URL.createObjectURL(blob);
+          imageUrlsRef.current[job.id] = url;
+          setImageUrls((current) => ({ ...current, [job.id]: url }));
+        })
+        .catch((cause: Error) => setImageError(cause.message))
+        .finally(() => loadingAssetsRef.current.delete(job.id));
+    }
+  }, [imageJobs]);
+
+  useEffect(() => () => {
+    for (const url of Object.values(imageUrlsRef.current)) {
+      URL.revokeObjectURL(url);
+    }
+  }, []);
+
+  async function handleRender() {
+    setRendering(true);
+    setRenderError(null);
+    if (videoUrl) {
+      URL.revokeObjectURL(videoUrl);
+      setVideoUrl(null);
+    }
+    try {
+      setRenderJob(await videoApi.render(script.id, script.templateCode));
+    } catch (error) {
+      setRenderError(error instanceof Error ? error.message : 'Unable to queue Blender render');
+    } finally {
+      setRendering(false);
+    }
+  }
+
+  async function handleGenerateShot(shot: ShotItem, shotIndex: number) {
+    setGeneratingShot(shotIndex);
+    setImageError(null);
+    try {
+      const job = await storyboardApi.generateImage(script.id, {
+        characterProfileId: selectedCharacterId || undefined,
+        shotIndex,
+        prompt: [
+          shot.visual,
+          shot.audio ? `Story context: ${shot.audio}` : '',
+          shot.environment ? `Environment: ${shot.environment}` : '',
+          shot.action ? `Character action: ${shot.action}` : '',
+          shot.camera ? `Camera framing: ${shot.camera}` : '',
+        ].filter(Boolean).join('. '),
+        qualityMode,
+        maximumShotCostUsd: qualityMode === 'QUALITY' ? 0.25 : 0.15,
+        reelBudgetUsd: reelBudget,
+      });
+      setImageJobs((current) => [job, ...current]);
+    } catch (cause) {
+      setImageError(cause instanceof Error ? cause.message : 'Unable to generate storyboard image');
+    } finally {
+      setGeneratingShot(null);
+    }
+  }
+
+  function latestImageJobForShot(shotIndex: number) {
+    return imageJobs.find((job) => job.shotIndex === shotIndex);
+  }
 
   async function handleShare() {
     const shareText = buildShareText(script, tags);
@@ -180,12 +452,60 @@ function ScriptCard({ script, onDelete }: { script: VideoScript; onDelete: () =>
             </div>
           )}
 
+          {/* Storyboard image controls */}
+          <div style={{ marginBottom: 14, padding: 12, background: 'var(--purple)0D', border: '1px solid var(--purple)33', borderRadius: 9 }}>
+            <div style={{ fontSize: '0.78rem', fontWeight: 700, marginBottom: 9, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ImagePlus size={14} color="var(--purple)" /> Storyboard image settings
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 9 }}>
+              <div>
+                <label className="form-label">Character</label>
+                <select className="form-input" value={selectedCharacterId} onChange={(event) => setSelectedCharacterId(event.target.value)}>
+                  <option value="">No character reference</option>
+                  {characters.map((character) => (
+                    <option key={character.id} value={character.id}>
+                      {character.name} ({character.references.length} refs)
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Quality</label>
+                <select className="form-input" value={qualityMode} onChange={(event) => setQualityMode(event.target.value as StoryboardQualityMode)}>
+                  <option value="ECONOMY">Economy</option>
+                  <option value="BALANCED">Balanced</option>
+                  <option value="QUALITY">Quality</option>
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Reel budget (USD)</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  min="0.1"
+                  max={providerStatus?.hardMaximumReelBudgetUsd ?? 5}
+                  step="0.1"
+                  value={reelBudget}
+                  onChange={(event) => setReelBudget(Number(event.target.value))}
+                />
+              </div>
+            </div>
+            {providerStatus && (
+              <div style={{ fontSize: '0.7rem', color: providerStatus.available ? 'var(--text-muted)' : 'var(--red)', marginTop: 8 }}>
+                {providerStatus.available
+                  ? `Routing: ${providerStatus.localEnabled ? 'local first' : 'paid provider'}${providerStatus.geminiEnabled ? ' → Gemini fallback' : ''}. Estimated paid shot: $${(qualityMode === 'QUALITY' ? providerStatus.proEstimatedCostUsd : providerStatus.flashEstimatedCostUsd).toFixed(2)}.`
+                  : 'No image provider is configured on the backend.'}
+              </div>
+            )}
+            {imageError && <div style={{ color: 'var(--red)', fontSize: '0.72rem', marginTop: 8 }}>{imageError}</div>}
+          </div>
+
           {/* Shot list */}
           {shots.length > 0 && (
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Shot List ({shots.length} shots)</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {shots.map((shot: any, i: number) => (
+                {shots.map((shot, i) => (
                   <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 12px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-xs)', fontSize: '0.82rem' }}>
                     <span style={{ width: 22, height: 22, background: 'var(--blue-glow)', color: 'var(--blue)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>
                       {shot.id || i + 1}
@@ -193,6 +513,37 @@ function ScriptCard({ script, onDelete }: { script: VideoScript; onDelete: () =>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: 'var(--text-primary)', marginBottom: 2 }}>🎥 {shot.visual}</div>
                       {shot.audio && <div style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>🔊 "{shot.audio}"</div>}
+                      {(shot.action || shot.camera) && (
+                        <div style={{ color: 'var(--blue)', fontSize: '0.7rem', marginTop: 3 }}>
+                          {[shot.character, shot.action, shot.camera].filter(Boolean).join(' · ')}
+                        </div>
+                      )}
+                      {latestImageJobForShot(i) && (
+                        <div style={{ marginTop: 8 }}>
+                          {imageUrls[latestImageJobForShot(i)!.id] && (
+                            <img
+                              src={imageUrls[latestImageJobForShot(i)!.id]}
+                              alt={`Storyboard shot ${i + 1}`}
+                              style={{ width: 150, aspectRatio: '9 / 16', objectFit: 'cover', borderRadius: 7, display: 'block', marginBottom: 6 }}
+                            />
+                          )}
+                          <div style={{ fontSize: '0.68rem', color: latestImageJobForShot(i)!.status === 'FAILED' ? 'var(--red)' : 'var(--text-muted)' }}>
+                            {latestImageJobForShot(i)!.status} · {latestImageJobForShot(i)!.provider}
+                            {latestImageJobForShot(i)!.actualCostUsd > 0 ? ` · $${latestImageJobForShot(i)!.actualCostUsd.toFixed(2)}` : ''}
+                            {latestImageJobForShot(i)!.errorMessage ? ` · ${latestImageJobForShot(i)!.errorMessage}` : ''}
+                          </div>
+                        </div>
+                      )}
+                      <button
+                        className="btn btn-ghost"
+                        onClick={() => handleGenerateShot(shot, i)}
+                        disabled={!providerStatus?.available || generatingShot === i || ['QUEUED', 'GENERATING'].includes(latestImageJobForShot(i)?.status ?? '')}
+                        style={{ marginTop: 7, padding: '5px 9px', fontSize: '0.7rem' }}
+                      >
+                        {generatingShot === i || ['QUEUED', 'GENERATING'].includes(latestImageJobForShot(i)?.status ?? '')
+                          ? <><div className="spinner" style={{ width: 11, height: 11, borderWidth: 2 }} /> Generating…</>
+                          : <><ImagePlus size={12} /> {latestImageJobForShot(i)?.status === 'COMPLETED' ? 'Regenerate image' : 'Generate image'}</>}
+                      </button>
                     </div>
                     {shot.duration && (
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', flexShrink: 0 }}>{shot.duration}s</span>
@@ -220,6 +571,47 @@ function ScriptCard({ script, onDelete }: { script: VideoScript; onDelete: () =>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>
             <Music size={11} /> {script.musicSuggestion}
           </span>
+        )}
+      </div>
+
+      {/* Blender render */}
+      <div style={{ marginTop: 14, padding: 12, border: '1px solid var(--border)', borderRadius: 10, background: 'var(--bg-primary)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', fontWeight: 700 }}>
+              <Clapperboard size={14} color="var(--blue)" /> Blender video
+            </div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: 3 }}>
+              {script.templateCode || 'TALKING_PRESENTER'} · reusable 3D template · no video AI
+            </div>
+          </div>
+          <button
+            onClick={handleRender}
+            className="btn btn-primary"
+            disabled={rendering || renderJob?.status === 'QUEUED' || renderJob?.status === 'RENDERING'}
+            style={{ padding: '7px 12px', fontSize: '0.76rem', flexShrink: 0 }}
+          >
+            {rendering || renderJob?.status === 'QUEUED' || renderJob?.status === 'RENDERING'
+              ? <><div className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} /> {renderJob?.status === 'RENDERING' ? 'Rendering…' : 'Queued…'}</>
+              : <><Clapperboard size={13} /> {renderJob?.status === 'COMPLETED' ? 'Render again' : 'Render MP4'}</>}
+          </button>
+        </div>
+        {renderJob?.status === 'FAILED' && (
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, color: 'var(--red)', fontSize: '0.76rem', lineHeight: 1.45 }}>
+            <CircleAlert size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>{renderJob.errorMessage || 'Blender render failed. Check the backend Blender installation and render log.'}</span>
+          </div>
+        )}
+        {renderError && (
+          <div style={{ marginTop: 10, color: 'var(--red)', fontSize: '0.76rem' }}>{renderError}</div>
+        )}
+        {videoUrl && (
+          <video
+            src={videoUrl}
+            controls
+            playsInline
+            style={{ width: '100%', maxHeight: 520, borderRadius: 8, background: '#000', marginTop: 12 }}
+          />
         )}
       </div>
 
@@ -272,6 +664,8 @@ function ScriptCard({ script, onDelete }: { script: VideoScript; onDelete: () =>
 export default function VideoGenerator() {
   const [scripts, setScripts] = useState<VideoScript[]>([]);
   const [templates, setTemplates] = useState<VideoTemplateOption[]>([]);
+  const [characters, setCharacters] = useState<CharacterProfile[]>([]);
+  const [providerStatus, setProviderStatus] = useState<StoryboardProviderStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -283,14 +677,16 @@ export default function VideoGenerator() {
   const [duration, setDuration] = useState(30);
   const [template, setTemplate] = useState('PRODUCT_SHOWCASE');
 
-  function load() {
-    setLoading(true);
-    videoApi.list().then(setScripts).catch(() => setScripts([])).finally(() => setLoading(false));
+  async function loadCharacters() {
+    const loaded = await storyboardApi.listCharacters();
+    setCharacters(loaded);
   }
 
   useEffect(() => {
-    load();
+    videoApi.list().then(setScripts).catch(() => setScripts([])).finally(() => setLoading(false));
     videoApi.listTemplates().then(setTemplates).catch(() => setTemplates([]));
+    storyboardApi.listCharacters().then(setCharacters).catch(() => setCharacters([]));
+    storyboardApi.providerStatus().then(setProviderStatus).catch(() => setProviderStatus(null));
   }, []);
 
   async function handleGenerate(e: React.FormEvent) {
@@ -310,8 +706,8 @@ export default function VideoGenerator() {
       const script = await videoApi.generate(input);
       setScripts((prev) => [script, ...prev]);
       setTopic('');
-    } catch (err: any) {
-      setError('Generation failed: ' + err.message);
+    } catch (err: unknown) {
+      setError('Generation failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setGenerating(false);
     }
@@ -321,19 +717,21 @@ export default function VideoGenerator() {
     try {
       await videoApi.delete(id);
       setScripts((prev) => prev.filter((s) => s.id !== id));
-    } catch (err: any) {
-      alert('Delete failed: ' + err.message);
+    } catch (err: unknown) {
+      alert('Delete failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   }
 
   return (
     <div className="animate-in">
       <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Video Script Generator</h2>
+        <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Script-to-Video Studio</h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-          AI-powered video scripts with hook, shot list, hashtags, and caption — ready to shoot
+          Generate a simple shot plan, then render it with reusable Blender characters and templates — no video-generation API
         </p>
       </div>
+
+      <CharacterLibrary characters={characters} onChanged={loadCharacters} />
 
       {/* Generator Form */}
       <div className="card" style={{ marginBottom: 24, borderColor: 'var(--blue)', borderWidth: 1 }}>
@@ -420,12 +818,12 @@ export default function VideoGenerator() {
           <button type="submit" className="btn btn-primary" disabled={generating || !topic.trim()}
             style={{ minWidth: 180 }}>
             {generating
-              ? <><div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Generating with AI…</>
+              ? <><div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Writing shot plan…</>
               : <><Sparkles size={14} /> Generate Script</>}
           </button>
           {generating && (
             <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: 10 }}>
-              Gemini is writing your hook, script, shot list, and hashtags… (~10-20 seconds)
+              The text model is writing a constrained Blender shot plan… (~10-20 seconds)
             </p>
           )}
         </form>
@@ -447,7 +845,13 @@ export default function VideoGenerator() {
             {scripts.length} script{scripts.length !== 1 ? 's' : ''} generated
           </div>
           {scripts.map((s) => (
-            <ScriptCard key={s.id} script={s} onDelete={() => handleDelete(s.id)} />
+            <ScriptCard
+              key={s.id}
+              script={s}
+              characters={characters}
+              providerStatus={providerStatus}
+              onDelete={() => handleDelete(s.id)}
+            />
           ))}
         </div>
       )}
