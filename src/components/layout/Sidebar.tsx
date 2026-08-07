@@ -4,59 +4,35 @@ import {
   LayoutDashboard, MessageSquare, Users, Calendar,
   Megaphone, BarChart3, Bot, UserPlus,
   CreditCard, Zap, LogOut, User, ChevronUp,
-  Globe, X, Wifi, WifiOff,
+  Globe, X, Wifi, WifiOff, FileText, Image,
+  TrendingUp, Video, Clock, HardDrive, Share2,
 } from 'lucide-react';
-import { api } from '../../services/api';
+import { crmApi, type Workspace } from '../../api/crmApi';
+import { logout } from '../../api/httpClient';
+import { useFeatures } from '../../contexts/FeaturesContext';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const navItems = [
-  {
-    section: 'Main',
-    items: [
-      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/inbox',     icon: MessageSquare,   label: 'Inbox'     },
-      { to: '/contacts',  icon: Users,           label: 'Contacts'  },
-      { to: '/bookings',  icon: Calendar,        label: 'Bookings'  },
-    ],
-  },
-  {
-    section: 'Marketing',
-    items: [
-      { to: '/campaigns', icon: Megaphone, label: 'Campaigns' },
-      { to: '/analytics', icon: BarChart3, label: 'Analytics' },
-    ],
-  },
-  {
-    section: 'Settings',
-    items: [
-      { to: '/settings/webhook', icon: Globe,    label: 'Webhook Setup' },
-      { to: '/settings/bot',     icon: Bot,      label: 'AI Bot Config' },
-      { to: '/settings/team',    icon: UserPlus, label: 'Team'          },
-      { to: '/settings/billing', icon: CreditCard, label: 'Billing'     },
-    ],
-  },
-];
-
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const navigate = useNavigate();
-  const [workspace, setWorkspace] = useState<any>(null);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const { isEnabled } = useFeatures();
 
   useEffect(() => {
-    api.getWorkspace().then(setWorkspace).catch(() => {});
+    crmApi.getWorkspace().then(setWorkspace).catch(() => {});
   }, []);
 
   const handleLogout = () => {
     setShowUserMenu(false);
-    navigate('/onboarding');
+    logout();
   };
 
   const initial = workspace?.name?.[0]?.toUpperCase() ?? '?';
-  const isConnected = workspace?.whatsapp_connected;
+  const isConnected = workspace?.whatsappConnected;
 
   return (
     <aside className={`sidebar${isOpen ? ' open' : ''}`}>
@@ -81,21 +57,99 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* ── Navigation ────────────────────────────────────── */}
       <nav className="sidebar-nav">
-        {navItems.map(({ section, items }) => (
-          <div className="nav-section" key={section}>
-            <p className="nav-section-title">{section}</p>
-            {items.map(({ to, icon: Icon, label }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-              >
-                <Icon size={18} className="nav-icon" />
-                <span>{label}</span>
+
+        <div className="nav-section">
+          <p className="nav-section-title">Main</p>
+          <NavLink to="/dashboard" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <LayoutDashboard size={18} className="nav-icon" /><span>Dashboard</span>
+          </NavLink>
+          <NavLink to="/inbox" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <MessageSquare size={18} className="nav-icon" /><span>Inbox</span>
+          </NavLink>
+          <NavLink to="/contacts" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <Users size={18} className="nav-icon" /><span>Contacts</span>
+          </NavLink>
+          <NavLink to="/bookings" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <Calendar size={18} className="nav-icon" /><span>Bookings</span>
+          </NavLink>
+        </div>
+
+        <div className="nav-section">
+          <p className="nav-section-title">Marketing</p>
+          {isEnabled('CAMPAIGNS') && (
+            <NavLink to="/campaigns" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+              <Megaphone size={18} className="nav-icon" /><span>Campaigns</span>
+            </NavLink>
+          )}
+          <NavLink to="/analytics" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <BarChart3 size={18} className="nav-icon" /><span>Analytics</span>
+          </NavLink>
+        </div>
+
+        {(isEnabled('DOCUMENT_CONTROL') || isEnabled('MEDIA_LIBRARY') ||
+          isEnabled('AI_TREND_PICKER') || isEnabled('AI_CONTENT_GENERATOR') ||
+          isEnabled('VIDEO_TEMPLATE_ENGINE') || isEnabled('SCHEDULED_PUBLISHING')) && (
+          <div className="nav-section">
+            <p className="nav-section-title">Content</p>
+            {isEnabled('DOCUMENT_CONTROL') && (
+              <NavLink to="/documents" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+                <FileText size={18} className="nav-icon" /><span>Documents</span>
               </NavLink>
-            ))}
+            )}
+            {isEnabled('MEDIA_LIBRARY') && (
+              <NavLink to="/media-library" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+                <Image size={18} className="nav-icon" /><span>Media Library</span>
+              </NavLink>
+            )}
+            {isEnabled('AI_TREND_PICKER') && (
+              <NavLink to="/trends" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+                <TrendingUp size={18} className="nav-icon" /><span>AI Trends</span>
+              </NavLink>
+            )}
+            {isEnabled('AI_CONTENT_GENERATOR') && (
+              <NavLink to="/content-studio" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+                <Zap size={18} className="nav-icon" /><span>Content Studio</span>
+              </NavLink>
+            )}
+            {isEnabled('VIDEO_TEMPLATE_ENGINE') && (
+              <NavLink to="/video-generator" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+                <Video size={18} className="nav-icon" /><span>Video Generator</span>
+              </NavLink>
+            )}
+            {isEnabled('SCHEDULED_PUBLISHING') && (
+              <NavLink to="/calendar" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+                <Clock size={18} className="nav-icon" /><span>Content Calendar</span>
+              </NavLink>
+            )}
           </div>
-        ))}
+        )}
+
+        <div className="nav-section">
+          <p className="nav-section-title">Settings</p>
+          <NavLink to="/settings/webhook" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <Globe size={18} className="nav-icon" /><span>Webhook Setup</span>
+          </NavLink>
+          <NavLink to="/settings/bot" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <Bot size={18} className="nav-icon" /><span>AI Bot Config</span>
+          </NavLink>
+          <NavLink to="/settings/team" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <UserPlus size={18} className="nav-icon" /><span>Team</span>
+          </NavLink>
+          {isEnabled('SCHEDULED_PUBLISHING') && (
+            <NavLink to="/settings/social" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+              <Share2 size={18} className="nav-icon" /><span>Social Accounts</span>
+            </NavLink>
+          )}
+          {(isEnabled('MEDIA_LIBRARY') || isEnabled('DOCUMENT_CONTROL')) && (
+            <NavLink to="/settings/storage" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+              <HardDrive size={18} className="nav-icon" /><span>Storage</span>
+            </NavLink>
+          )}
+          <NavLink to="/settings/billing" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <CreditCard size={18} className="nav-icon" /><span>Billing</span>
+          </NavLink>
+        </div>
+
       </nav>
 
       {/* ── WhatsApp connection status ────────────────────── */}

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Bot, Clock, CalendarCheck, MessageSquare, Megaphone, TrendingUp, ArrowUpRight, Users, Zap, AlertCircle } from 'lucide-react';
-import { api } from '../services/api';
+import { crmApi, type CrmConversation, type CrmStats, type Workspace } from '../api/crmApi';
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -18,18 +18,18 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ leadsToday: 0, messagesSent: 0, totalContacts: 0, totalBookings: 0 });
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [workspace, setWorkspace] = useState<any>(null);
+  const [stats, setStats] = useState<CrmStats>({ leadsToday: 0, messagesSent: 0, totalContacts: 0, totalBookings: 0 });
+  const [conversations, setConversations] = useState<CrmConversation[]>([]);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
         const [s, c, w] = await Promise.all([
-          api.getStats(),
-          api.getConversations(),
-          api.getWorkspace(),
+          crmApi.getStats(),
+          crmApi.getConversations(),
+          crmApi.getWorkspace(),
         ]);
         setStats(s);
         setConversations(c);
@@ -65,7 +65,7 @@ export default function Dashboard() {
   return (
     <div className="animate-in">
       {/* WhatsApp connection banner */}
-      {workspace && !workspace.whatsapp_connected && (
+      {workspace && !workspace.whatsappConnected && (
         <div style={{
           padding: '14px 20px', background: 'var(--orange-glow)', border: '1px solid rgba(249,115,22,0.3)',
           borderRadius: 'var(--radius)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12,
@@ -122,7 +122,7 @@ export default function Dashboard() {
           </div>
         ) : (
           <div>
-            {conversations.slice(0, 8).map((conv: any) => (
+            {conversations.slice(0, 8).map((conv) => (
               <div key={conv.id} style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0',
                 borderBottom: '1px solid var(--border)', cursor: 'pointer',
@@ -133,18 +133,18 @@ export default function Dashboard() {
                   color: conv.status === 'human' ? 'var(--yellow)' : conv.status === 'bot' ? 'var(--accent)' : 'var(--blue)',
                   fontWeight: 700, fontSize: '0.8rem', flexShrink: 0,
                 }}>
-                  {(conv.contact_name || '??').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                  {(conv.contactName || '??').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{conv.contact_name || conv.wa_id}</div>
+                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{conv.contactName || conv.waId}</div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {conv.last_message || 'No messages'}
+                    {conv.lastMessage || 'No messages'}
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {conv.unread_count > 0 && <span className="nav-badge">{conv.unread_count}</span>}
-                  <span className={`badge ${conv.status === 'bot' ? 'green' : conv.status === 'human' ? 'yellow' : conv.status === 'open' ? 'blue' : 'gray'}`}>
-                    {conv.status === 'bot' ? '🤖 Bot' : conv.status === 'human' ? '👤 Agent' : conv.status === 'open' ? 'Open' : 'Closed'}
+                  {conv.unreadCount > 0 && <span className="nav-badge">{conv.unreadCount}</span>}
+                  <span className={`badge ${conv.status === 'bot' ? 'green' : conv.status === 'human' ? 'yellow' : 'gray'}`}>
+                    {conv.status === 'bot' ? '🤖 Bot' : conv.status === 'human' ? '👤 Agent' : 'Closed'}
                   </span>
                 </div>
               </div>

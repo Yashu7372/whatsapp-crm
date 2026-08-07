@@ -4,7 +4,7 @@ import { login } from '../api/authApi';
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail]       = useState('admin@demo.com');
+  const [email, setEmail]       = useState('admin@speedwheels.com');
   const [password, setPassword] = useState('admin123');
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);

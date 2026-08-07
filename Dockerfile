@@ -3,8 +3,7 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# --ignore-scripts skips native addon compilation (better-sqlite3 is server-only,
-# not needed during the Vite build step)
+# --ignore-scripts keeps the web build lean and avoids any optional native hooks.
 COPY package*.json ./
 RUN npm ci --ignore-scripts
 

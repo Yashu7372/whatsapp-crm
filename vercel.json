@@ -1,3 +1,11 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/api/v1/:path*", "destination": "https://YOUR_CF_TUNNEL_URL/api/v1/:path*" },
+    { "source": "/webhook/:path*",  "destination": "https://YOUR_CF_TUNNEL_URL/webhook/:path*" },
+    { "source": "/api/:path*",      "destination": "https://YOUR_CF_TUNNEL_URL/api/:path*" },
+    { "source": "/(.*)",            "destination": "/index.html" }
+  ],
+  "env": {
+    "VITE_MOCK": "false"
+  }
 }

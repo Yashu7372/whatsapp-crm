@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send, Paperclip, MoreVertical, Phone, Bot, UserCheck, AlertTriangle } from 'lucide-react';
-import { api } from '../services/api';
+import { crmApi, type CrmAgent, type CrmConversation, type CrmMessage } from '../api/crmApi';
 
 const avatarBgs = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626', '#0891b2', '#7c2d12', '#4f46e5'];
 
@@ -16,9 +16,10 @@ function timeAgo(dateStr: string) {
 }
 
 export default function Inbox() {
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<CrmConversation[]>([]);
+  const [agents, setAgents] = useState<CrmAgent[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<CrmMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -30,13 +31,14 @@ export default function Inbox() {
   useEffect(() => {
     async function load() {
       try {
-        const convs = await api.getConversations();
+        const convs = await crmApi.getConversations();
         setConversations(convs);
         if (!activeConvId && convs.length > 0) setActiveConvId(convs[0].id);
       } catch (e) { console.error(e); }
       finally { setLoading(false); }
     }
     load();
+    crmApi.getAgents().then(setAgents).catch(console.error);
     const interval = setInterval(load, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -46,7 +48,7 @@ export default function Inbox() {
     if (!activeConvId) return;
     async function loadMessages() {
       try {
-        const msgs = await api.getMessages(activeConvId!);
+        const msgs = await crmApi.getMessages(activeConvId!);
         setMessages(msgs);
       } catch (e) { console.error(e); }
     }
@@ -66,10 +68,10 @@ export default function Inbox() {
     if (!input.trim() || !activeConvId) return;
     setSending(true);
     try {
-      await api.sendMessage(activeConvId, input.trim());
+      await crmApi.sendMessage(activeConvId, input.trim());
       setInput('');
       // Reload messages
-      const msgs = await api.getMessages(activeConvId);
+      const msgs = await crmApi.getMessages(activeConvId);
       setMessages(msgs);
     } catch (e) { console.error(e); }
     finally { setSending(false); }
@@ -77,8 +79,15 @@ export default function Inbox() {
 
   const handleHandoff = async (status: 'bot' | 'human') => {
     if (!activeConvId) return;
-    await api.updateConversationStatus(activeConvId, status);
-    const convs = await api.getConversations();
+    await crmApi.updateConversationStatus(activeConvId, status);
+    const convs = await crmApi.getConversations();
+    setConversations(convs);
+  };
+
+  const handleAssign = async (agentId: string) => {
+    if (!activeConvId || !agentId) return;
+    await crmApi.assignConversation(activeConvId, agentId);
+    const convs = await crmApi.getConversations();
     setConversations(convs);
   };
 
@@ -97,7 +106,7 @@ export default function Inbox() {
         <div className="inbox-list-header">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <h3 style={{ fontWeight: 700, fontSize: '1rem' }}>Messages</h3>
-            <span className="badge green">{conversations.filter(c => c.unread_count > 0).length} unread</span>
+            <span className="badge green">{conversations.filter(c => c.unreadCount > 0).length} unread</span>
           </div>
         </div>
 
@@ -115,14 +124,14 @@ export default function Inbox() {
               onClick={() => setActiveConvId(conv.id)}
             >
               <div className="contact-avatar" style={{ background: avatarBgs[i % avatarBgs.length] }}>
-                {getInitials(conv.contact_name)}
+                {getInitials(conv.contactName || '')}
               </div>
               <div className="contact-info">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="contact-name">{conv.contact_name || conv.wa_id}</span>
-                  <span className="contact-time">{timeAgo(conv.last_message_at)}</span>
+                  <span className="contact-name">{conv.contactName || conv.waId}</span>
+                  <span className="contact-time">{timeAgo(conv.lastMessageAt || '')}</span>
                 </div>
-                <div className="contact-preview">{conv.last_message || '...'}</div>
+                <div className="contact-preview">{conv.lastMessage || '...'}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                   <span style={{
                     width: 6, height: 6, borderRadius: '50%',
@@ -136,7 +145,7 @@ export default function Inbox() {
                   )}
                 </div>
               </div>
-              {conv.unread_count > 0 && <div className="unread-dot" />}
+              {conv.unreadCount > 0 && <div className="unread-dot" />}
             </div>
           ))
         )}
@@ -152,16 +161,31 @@ export default function Inbox() {
                   width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: avatarBgs[conversations.indexOf(activeConv) % avatarBgs.length], fontWeight: 700, fontSize: '0.85rem',
                 }}>
-                  {getInitials(activeConv.contact_name)}
+                  {getInitials(activeConv.contactName || '')}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 600 }}>{activeConv.contact_name || activeConv.wa_id}</div>
+                  <div style={{ fontWeight: 600 }}>{activeConv.contactName || activeConv.waId}</div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Phone size={11} /> {activeConv.contact_phone || activeConv.wa_id}
+                    <Phone size={11} /> {activeConv.contactPhone || activeConv.waId}
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {activeConv.status === 'human' && agents.length > 0 && (
+                  <select
+                    value={activeConv.assignedAgentId ?? ''}
+                    onChange={(e) => handleAssign(e.target.value)}
+                    style={{
+                      padding: '6px 10px', borderRadius: 8, fontSize: '0.8rem',
+                      background: 'var(--bg-card)', color: 'var(--text)', border: '1px solid var(--border)',
+                    }}
+                  >
+                    <option value="" disabled>Assign to agent…</option>
+                    {agents.map(a => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                )}
                 {activeConv.status === 'bot' ? (
                   <button className="btn btn-sm btn-secondary" onClick={() => handleHandoff('human')}>
                     <UserCheck size={14} /> Take Over
@@ -180,7 +204,10 @@ export default function Inbox() {
                 display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', color: 'var(--yellow)',
               }}>
                 <AlertTriangle size={16} />
-                <span><strong>Human mode</strong> — Bot is paused. You're replying directly to the customer.</span>
+                <span>
+                  <strong>Human mode</strong> — Bot is paused. You're replying directly to the customer.
+                  {activeConv.assignedAgentName && <> Assigned to <strong>{activeConv.assignedAgentName}</strong>.</>}
+                </span>
               </div>
             )}
 
@@ -199,19 +226,19 @@ export default function Inbox() {
                       {msg.intent && msg.direction === 'inbound' && (
                         <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <span className="badge blue" style={{ fontSize: '0.65rem' }}>{msg.intent}</span>
-                          {msg.confidence_score != null && (
-                            <span className={`badge ${msg.confidence_score >= 0.75 ? 'green' : 'yellow'}`} style={{ fontSize: '0.65rem' }}>
-                              {Math.round(msg.confidence_score * 100)}%
+                          {msg.confidenceScore != null && (
+                            <span className={`badge ${msg.confidenceScore >= 0.75 ? 'green' : 'yellow'}`} style={{ fontSize: '0.65rem' }}>
+                              {Math.round(msg.confidenceScore * 100)}%
                             </span>
                           )}
                         </div>
                       )}
 
                       {/* Outbound: show action_type badge */}
-                      {msg.action_type && msg.direction === 'outbound' && (
+                      {msg.actionType && msg.direction === 'outbound' && (
                         <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          <span className={`badge ${msg.action_type === 'EXISTING_CUSTOMER' ? 'purple' : 'blue'}`} style={{ fontSize: '0.65rem' }}>
-                            {msg.action_type === 'EXISTING_CUSTOMER' ? '🚗 Existing Customer' : '🆕 New Prospect'}
+                          <span className={`badge ${msg.actionType === 'EXISTING_CUSTOMER' ? 'purple' : 'blue'}`} style={{ fontSize: '0.65rem' }}>
+                            {msg.actionType === 'EXISTING_CUSTOMER' ? '🚗 Existing Customer' : '🆕 New Prospect'}
                           </span>
                           {msg.intent && (
                             <span className="badge green" style={{ fontSize: '0.65rem' }}>{msg.intent}</span>
@@ -235,8 +262,8 @@ export default function Inbox() {
                       )}
                     </div>
                     <div style={{ textAlign: msg.direction === 'outbound' ? 'right' : 'left', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                      {new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      {msg.direction === 'outbound' && ' · 🤖 AI'}
+                      {new Date(msg.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {msg.direction === 'outbound' && (msg.aiGenerated ? ' · 🤖 AI' : ' · 👤 Agent')}
                     </div>
                   </div>
                 );

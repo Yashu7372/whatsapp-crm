@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Bot, Shield, Clock, MessageSquare, Globe, Save, CheckCircle, AlertCircle, Wifi, Plus, Trash2 } from 'lucide-react';
-import { api } from '../../services/api';
+import { crmApi, type FaqItem, type Workspace } from '../../api/crmApi';
 
 export default function BotSettings() {
-  const [workspace, setWorkspace] = useState<any>(null);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -15,17 +15,17 @@ export default function BotSettings() {
   const [whatsappPhoneId, setWhatsappPhoneId] = useState('');
   const [whatsappToken, setWhatsappToken] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
-  const [faq, setFaq] = useState<{ q: string; a: string }[]>([]);
+  const [faq, setFaq] = useState<FaqItem[]>([]);
 
   useEffect(() => {
-    api.getWorkspace().then((w) => {
+    crmApi.getWorkspace().then((w) => {
       setWorkspace(w);
       setName(w.name || '');
-      setBusinessType(w.business_type || 'other');
-      setBusinessHours(w.business_hours || '');
-      setWhatsappPhoneId(w.whatsapp_phone_id || '');
-      setWhatsappToken(w.whatsapp_token || '');
-      setWhatsappNumber(w.whatsapp_number || '');
+      setBusinessType(w.businessType || 'other');
+      setBusinessHours(w.businessHours || '');
+      setWhatsappPhoneId(w.whatsappPhoneId || '');
+      setWhatsappToken(w.whatsappToken || '');
+      setWhatsappNumber(w.whatsappNumber || '');
       setFaq(w.faq || []);
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
@@ -34,11 +34,11 @@ export default function BotSettings() {
     setSaving(true);
     setSaved(false);
     try {
-      const updated = await api.updateWorkspace({
-        name, business_type: businessType, business_hours: businessHours,
-        whatsapp_phone_id: whatsappPhoneId || undefined,
-        whatsapp_token: whatsappToken || undefined,
-        whatsapp_number: whatsappNumber || undefined,
+      const updated = await crmApi.updateWorkspace({
+        name, businessType, businessHours,
+        whatsappPhoneId: whatsappPhoneId || undefined,
+        whatsappToken: whatsappToken || undefined,
+        whatsappNumber: whatsappNumber || undefined,
         faq,
       });
       setWorkspace(updated);
@@ -78,15 +78,15 @@ export default function BotSettings() {
 
         {/* WhatsApp Connection — Most Important */}
         <div className="card" style={{
-          borderColor: workspace?.whatsapp_connected ? 'rgba(34,197,94,0.3)' : 'rgba(249,115,22,0.3)',
-          background: workspace?.whatsapp_connected
+          borderColor: workspace?.whatsappConnected ? 'rgba(34,197,94,0.3)' : 'rgba(249,115,22,0.3)',
+          background: workspace?.whatsappConnected
             ? 'linear-gradient(135deg, rgba(34,197,94,0.05), var(--bg-card))'
             : 'linear-gradient(135deg, rgba(249,115,22,0.05), var(--bg-card))',
         }}>
           <div className="card-header">
             <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Wifi size={18} /> WhatsApp Connection
-              {workspace?.whatsapp_connected ? (
+              {workspace?.whatsappConnected ? (
                 <span className="badge green"><CheckCircle size={11} /> Connected</span>
               ) : (
                 <span className="badge orange"><AlertCircle size={11} /> Not Connected</span>
@@ -105,10 +105,10 @@ export default function BotSettings() {
               <li>Go to <strong>WhatsApp → API Setup</strong></li>
               <li>Copy your <strong>Phone Number ID</strong> and <strong>Temporary Access Token</strong></li>
               <li>For the webhook URL, use: <code style={{ background: 'var(--bg-card)', padding: '2px 6px', borderRadius: 4 }}>
-                https://YOUR_DOMAIN/webhook/whatsapp
+                https://YOUR_DOMAIN/webhook
               </code></li>
               <li>Set verify token to: <code style={{ background: 'var(--bg-card)', padding: '2px 6px', borderRadius: 4 }}>
-                {workspace?.webhook_verify_token || 'loading...'}
+                {workspace?.webhookVerifyToken || 'loading...'}
               </code></li>
             </ol>
           </div>
@@ -132,7 +132,7 @@ export default function BotSettings() {
           </div>
 
           <div style={{ padding: '10px 14px', background: 'var(--blue-glow)', borderRadius: 'var(--radius-xs)', fontSize: '0.82rem', color: 'var(--blue)' }}>
-            <strong>Webhook Verify Token:</strong> {workspace?.webhook_verify_token || '—'}
+            <strong>Webhook Verify Token:</strong> {workspace?.webhookVerifyToken || '—'}
             <span style={{ marginLeft: 8, color: 'var(--text-muted)' }}>(use this when configuring webhook in Meta Developer Portal)</span>
           </div>
         </div>

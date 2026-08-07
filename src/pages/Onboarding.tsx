@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, Check, MessageSquare, Zap, Send } from 'lucide-react';
+import { crmApi } from '../api/crmApi';
+import { isAuthenticated } from '../api/httpClient';
 
 const bizTypes = [
   { id: 'dentist', icon: '🦷', name: 'Dentist / Clinic' },
@@ -19,9 +21,11 @@ const steps = [
   { title: 'Send a Test Message', subtitle: 'See your AI bot in action!' },
 ];
 
-import { api } from '../services/api';
-
 export default function Onboarding() {
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+
   const [step, setStep] = useState(0);
   const [bizType, setBizType] = useState('');
   const [whatsappPhoneId, setWhatsappPhoneId] = useState('');
@@ -34,10 +38,10 @@ export default function Onboarding() {
     } else {
       // Complete onboarding
       try {
-        await api.updateWorkspace({
-          business_type: bizType || 'other',
-          whatsapp_phone_id: whatsappPhoneId || undefined,
-          whatsapp_token: whatsappToken || undefined,
+        await crmApi.updateWorkspace({
+          businessType: bizType || 'other',
+          whatsappPhoneId: whatsappPhoneId || undefined,
+          whatsappToken: whatsappToken || undefined,
         });
       } catch (e) {
         console.error('Failed to save onboarding data:', e);

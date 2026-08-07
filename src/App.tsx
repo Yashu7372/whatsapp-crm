@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import DashboardLayout from './components/layout/DashboardLayout';
 import AuthGuard from './components/AuthGuard';
+import { FeaturesProvider } from './contexts/FeaturesContext';
 
 /* Lazy-loaded pages for optimal code splitting */
 const Login = lazy(() => import('./pages/Login'));
@@ -29,6 +30,9 @@ const Products = lazy(() => import('./pages/Products'));
 const Orders = lazy(() => import('./pages/Orders'));
 const VideoGenerator = lazy(() => import('./pages/VideoGenerator'));
 const OAuthCallback = lazy(() => import('./pages/OAuthCallback'));
+const StorageSettings = lazy(() => import('./pages/settings/StorageSettings'));
+const SocialAccountSettings = lazy(() => import('./pages/settings/SocialAccountSettings'));
+const MediaLibrary = lazy(() => import('./pages/MediaLibrary'));
 
 function PageLoader() {
   return (
@@ -49,6 +53,7 @@ function PageLoader() {
 export default function App() {
   return (
     <BrowserRouter>
+      <FeaturesProvider>
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Public routes */}
@@ -79,13 +84,17 @@ export default function App() {
             <Route path="/learning"         element={<LearningInsights />} />
             <Route path="/products"         element={<Products />} />
             <Route path="/orders"           element={<Orders />} />
-            <Route path="/video-generator"  element={<VideoGenerator />} />
+            <Route path="/video-generator"       element={<VideoGenerator />} />
+            <Route path="/settings/storage"       element={<StorageSettings />} />
+            <Route path="/settings/social"        element={<SocialAccountSettings />} />
+            <Route path="/media-library"          element={<MediaLibrary />} />
           </Route>
 
           {/* Default redirect */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Suspense>
+      </FeaturesProvider>
     </BrowserRouter>
   );
 }

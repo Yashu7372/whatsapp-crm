@@ -3,10 +3,6 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  define: {
-    // Enable mock mode in all builds so the deployed demo works without a backend
-    'import.meta.env.VITE_MOCK': JSON.stringify('true'),
-  },
   plugins: [
     react(),
     VitePWA({
@@ -41,8 +37,7 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/api/v1': { target: 'http://localhost:3001', changeOrigin: true },
-      '/api': { target: 'http://localhost:3001', changeOrigin: true },
+      '/api/v1': { target: 'http://localhost:8080', changeOrigin: true },
     },
   },
 })
