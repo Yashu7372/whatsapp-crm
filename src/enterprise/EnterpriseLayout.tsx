@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Files, GitBranch, Send, CheckSquare, WalletCards, ChartNoAxesCombined,
+  LayoutDashboard, Files, GitBranch, Send, CheckSquare, WalletCards, TrendingUp,
   Sparkles, ShieldCheck, MessageCircle, ArrowLeft, Building2
 } from 'lucide-react';
 import './enterprise.css';
@@ -8,7 +8,7 @@ import './enterprise.css';
 const nav = [
   ['Overview', '/control', LayoutDashboard],
   ['Documents', '/control/documents', Files],
-  ['Project Controls', '/control/project-controls', ChartNoAxesCombined],
+  ['Project Controls', '/control/project-controls', TrendingUp],
   ['Budget & IPC', '/control/commercial', WalletCards],
   ['Workflows', '/control/workflows', GitBranch],
   ['Transmittals', '/control/transmittals', Send],
