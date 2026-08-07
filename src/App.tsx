@@ -40,7 +40,12 @@ const EnterpriseLayout = lazy(() => import('./enterprise/EnterpriseLayout'));
 const EnterpriseDashboard = lazy(() => import('./enterprise/EnterpriseDashboard'));
 const EnterpriseDocuments = lazy(() => import('./enterprise/DocumentRegister'));
 const BudgetIpc = lazy(() => import('./enterprise/BudgetIpc'));
-const EnterprisePages = lazy(() => import('./enterprise/EnterprisePages'));
+const EnterpriseWorkflows = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Workflows })));
+const EnterpriseTransmittals = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Transmittals })));
+const EnterpriseApprovals = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Approvals })));
+const EnterpriseInsights = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Insights })));
+const EnterpriseAudit = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Audit })));
+const EnterpriseCommunications = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Communications })));
 
 function PageLoader() {
   return (
@@ -95,12 +100,12 @@ export default function App() {
             <Route index element={<EnterpriseDashboard />} />
             <Route path="documents" element={<EnterpriseDocuments />} />
             <Route path="commercial" element={<BudgetIpc />} />
-            <Route path="workflows" element={<EnterprisePages.Workflows />} />
-            <Route path="transmittals" element={<EnterprisePages.Transmittals />} />
-            <Route path="approvals" element={<EnterprisePages.Approvals />} />
-            <Route path="insights" element={<EnterprisePages.Insights />} />
-            <Route path="audit" element={<EnterprisePages.Audit />} />
-            <Route path="communications" element={<EnterprisePages.Communications />} />
+            <Route path="workflows" element={<EnterpriseWorkflows />} />
+            <Route path="transmittals" element={<EnterpriseTransmittals />} />
+            <Route path="approvals" element={<EnterpriseApprovals />} />
+            <Route path="insights" element={<EnterpriseInsights />} />
+            <Route path="audit" element={<EnterpriseAudit />} />
+            <Route path="communications" element={<EnterpriseCommunications />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
