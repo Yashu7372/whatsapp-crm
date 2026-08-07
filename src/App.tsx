@@ -41,6 +41,7 @@ const EnterpriseDashboard = lazy(() => import('./enterprise/EnterpriseDashboard'
 const EnterpriseDocuments = lazy(() => import('./enterprise/DocumentRegister'));
 const BudgetIpc = lazy(() => import('./enterprise/BudgetIpc'));
 const ProjectControls = lazy(() => import('./enterprise/ProjectControls'));
+const ResourceCosts = lazy(() => import('./enterprise/ResourceCosts'));
 const EnterpriseWorkflows = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Workflows })));
 const EnterpriseTransmittals = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Transmittals })));
 const EnterpriseApprovals = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Approvals })));
@@ -101,6 +102,7 @@ export default function App() {
             <Route index element={<EnterpriseDashboard />} />
             <Route path="documents" element={<EnterpriseDocuments />} />
             <Route path="project-controls" element={<ProjectControls />} />
+            <Route path="resource-costs" element={<ResourceCosts />} />
             <Route path="commercial" element={<BudgetIpc />} />
             <Route path="workflows" element={<EnterpriseWorkflows />} />
             <Route path="transmittals" element={<EnterpriseTransmittals />} />
