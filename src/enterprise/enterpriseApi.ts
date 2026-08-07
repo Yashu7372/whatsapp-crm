@@ -143,6 +143,43 @@ export type ForecastSnapshot = {
   notes?: string;
 };
 
+export type ResourceCostSummary = {
+  labourCost: number;
+  equipmentCost: number;
+  manualCost: number;
+  totalActualCost: number;
+  activeResources: number;
+  pendingTimesheets: number;
+  visibilityScope: 'PROJECT' | 'ORGANIZATION';
+};
+
+export type ProjectResource = {
+  id: string;
+  organizationId: string;
+  organizationName: string;
+  resourceType: 'PERSON' | 'EQUIPMENT' | 'MACHINE' | 'VEHICLE';
+  resourceCode: string;
+  displayName: string;
+  userId?: string;
+  active: boolean;
+};
+
+export type ActualCostEntry = {
+  id: string;
+  organizationId: string;
+  organizationName: string;
+  budgetLineId?: string;
+  costCode?: string;
+  resourceId?: string;
+  resourceName?: string;
+  sourceType: 'TIMESHEET' | 'EQUIPMENT_USAGE' | 'MANUAL';
+  costDate: string;
+  quantity: number;
+  amount: number;
+  currency: string;
+  description?: string;
+};
+
 export const enterpriseApi = {
   projects: () => http.get<Project[]>('/projects?status=ACTIVE'),
   commercialOverview: (projectId: string, includeAi = true) =>
@@ -158,4 +195,10 @@ export const enterpriseApi = {
     http.get<BudgetView | undefined>(`/projects/${projectId}/controls/budget`),
   forecasts: (projectId: string) =>
     http.get<ForecastSnapshot[]>(`/projects/${projectId}/controls/forecasts`),
+  resourceCostSummary: (projectId: string) =>
+    http.get<ResourceCostSummary>(`/projects/${projectId}/resource-costs/summary`),
+  projectResources: (projectId: string) =>
+    http.get<ProjectResource[]>(`/projects/${projectId}/resource-costs/resources`),
+  actualCosts: (projectId: string) =>
+    http.get<ActualCostEntry[]>(`/projects/${projectId}/resource-costs/actual-costs`),
 };
