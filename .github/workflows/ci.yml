@@ -36,6 +36,7 @@ jobs:
           src/enterprise/WorkflowControl.tsx
           src/enterprise/ApprovalInbox.tsx
           src/enterprise/SecurityAccess.tsx
+          src/enterprise/NotificationCenter.tsx
           src/enterprise/ProjectControls.tsx
           src/enterprise/ResourceCosts.tsx
           src/enterprise/CommercialFacts.tsx
