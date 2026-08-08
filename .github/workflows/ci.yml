@@ -14,23 +14,18 @@ jobs:
   verify:
     name: TypeScript build and feature lint
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
-
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
-
       - name: TypeScript and Vite build
         run: npm run build
-
       - name: Lint enterprise change set
         run: >-
           npx eslint
@@ -38,6 +33,9 @@ jobs:
           src/enterprise/EnterpriseLayout.tsx
           src/enterprise/DocumentRegister.tsx
           src/enterprise/Transmittals.tsx
+          src/enterprise/WorkflowControl.tsx
+          src/enterprise/ApprovalInbox.tsx
+          src/enterprise/SecurityAccess.tsx
           src/enterprise/ProjectControls.tsx
           src/enterprise/ResourceCosts.tsx
           src/enterprise/CommercialFacts.tsx
