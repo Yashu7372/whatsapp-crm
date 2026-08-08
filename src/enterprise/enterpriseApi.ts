@@ -11,6 +11,8 @@ export type DocumentPage = {
   documents: DocumentRecord[]; page: number; size: number; hasMore: boolean;
 };
 
+export type Organization = { id: string; name: string; orgCode: string; active: boolean };
+
 export type Transmittal = { id:string; transmittalNo:string; senderOrganizationId:string; senderOrganizationName:string; purpose:string; subject?:string; status:string; issuedAt?:string; createdAt:string; itemCount:number; recipientCount:number };
 export type TransmittalDetail = { header:{id:string;projectId:string;transmittalNo:string;senderOrganizationId:string;senderOrganizationName:string;purpose:string;subject?:string;message?:string;status:string;createdAt:string;issuedAt?:string}; items:Array<{id:string;documentId:string;versionId:string;documentCode?:string;title:string;revisionCode:string;issuePurpose?:string;createdAt:string}>; recipients:Array<{id:string;organizationId:string;organizationName:string;createdAt:string;acknowledgedAt?:string;acknowledgedByEmail?:string}>; history:Array<{eventType:string;at:string;subject?:string;detail?:string}> };
 export type Workflow = { id:string; name:string; docType:string; steps:string; active:boolean; createdAt:string; updatedAt:string };
@@ -62,6 +64,8 @@ export const enterpriseApi = {
   setCapabilityOverride:(projectId:string,request:{partyRole:string;userRole:string;permissionCode:string;effect:'ALLOW'|'DENY';dataScope?:'PROJECT'|'ORGANIZATION'|'ASSIGNED'})=>http.put<void>(`/projects/${projectId}/capabilities`,request),
   resetCapabilityOverride:(projectId:string,partyRole:string,userRole:string,permissionCode:string)=>http.delete<void>(`/projects/${projectId}/capabilities?partyRole=${encodeURIComponent(partyRole)}&userRole=${encodeURIComponent(userRole)}&permissionCode=${encodeURIComponent(permissionCode)}`),
   permissionAudit:(projectId:string)=>http.get<PermissionAudit[]>(`/projects/${projectId}/capabilities/audit`),
+  nonOverridablePermissions:(projectId:string)=>http.get<string[]>(`/projects/${projectId}/capabilities/non-overridable`),
+  organizations:()=>http.get<Organization[]>('/organizations?activeOnly=true'),
   notifications:()=>http.get<DocumentNotification[]>('/document-notifications'),
   notificationUnread:()=>http.get<number>('/document-notifications/unread-count'),
   markNotificationRead:(id:string)=>http.post<void>(`/document-notifications/${id}/read`,{}),
