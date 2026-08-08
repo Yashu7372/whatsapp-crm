@@ -15,6 +15,13 @@ export interface Document {
   updatedAt: string;
 }
 
+export interface DocumentPage {
+  documents: Document[];
+  page: number;
+  size: number;
+  hasMore: boolean;
+}
+
 export interface DocumentVersion {
   id: string;
   documentId: string;
@@ -53,7 +60,7 @@ export interface Workflow {
 
 export const documentApi = {
   list: (docType?: string) =>
-    http.get<Document[]>(`/documents${docType ? `?docType=${docType}` : ''}`),
+    http.get<DocumentPage>(`/documents${docType ? `?docType=${docType}` : ''}`),
 
   get: (id: string) => http.get<Document>(`/documents/${id}`),
 
