@@ -180,6 +180,34 @@ export type ActualCostEntry = {
   description?: string;
 };
 
+export type CommercialFactSummary = {
+  activeCommitments: number;
+  acceptedMaterialActual: number;
+  pendingVariationExposure: number;
+  approvedVariations: number;
+  visibilityScope: 'PROJECT' | 'ORGANIZATION';
+};
+
+export type Commitment = {
+  id: string; organizationId: string; organizationName: string; budgetLineId?: string; costCode?: string;
+  commitmentType: 'PURCHASE_ORDER' | 'SUBCONTRACT' | 'OTHER'; referenceNo: string; description?: string;
+  originalAmount: number; approvedChanges: number; currentAmount: number; currency: string; status: string;
+  startDate?: string; endDate?: string;
+};
+
+export type MaterialReceipt = {
+  id: string; organizationId: string; organizationName: string; commitmentId?: string; commitmentReference?: string;
+  budgetLineId?: string; costCode?: string; receiptRef: string; materialCode?: string; description: string;
+  receiptDate: string; quantity: number; unit?: string; unitCost: number; amount: number; currency: string; status: string;
+  documentId?: string;
+};
+
+export type Variation = {
+  id: string; organizationId?: string; organizationName?: string; budgetLineId?: string; costCode?: string;
+  variationRef: string; title: string; sourceType?: string; requestedAmount: number; approvedAmount?: number;
+  currency: string; status: string; sourceDocumentId?: string; submittedAt?: string; approvedAt?: string;
+};
+
 export const enterpriseApi = {
   projects: () => http.get<Project[]>('/projects?status=ACTIVE'),
   commercialOverview: (projectId: string, includeAi = true) =>
@@ -201,4 +229,12 @@ export const enterpriseApi = {
     http.get<ProjectResource[]>(`/projects/${projectId}/resource-costs/resources`),
   actualCosts: (projectId: string) =>
     http.get<ActualCostEntry[]>(`/projects/${projectId}/resource-costs/actual-costs`),
+  commercialFactSummary: (projectId: string) =>
+    http.get<CommercialFactSummary>(`/projects/${projectId}/commercial-facts/summary`),
+  commitments: (projectId: string) =>
+    http.get<Commitment[]>(`/projects/${projectId}/commercial-facts/commitments`),
+  materialReceipts: (projectId: string) =>
+    http.get<MaterialReceipt[]>(`/projects/${projectId}/commercial-facts/materials`),
+  variations: (projectId: string) =>
+    http.get<Variation[]>(`/projects/${projectId}/commercial-facts/variations`),
 };
