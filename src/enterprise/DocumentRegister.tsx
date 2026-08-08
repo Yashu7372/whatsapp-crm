@@ -12,6 +12,10 @@ const securityBadge = (classification?: string) =>
 
 const ISSUE_PURPOSES = ['FOR_INFORMATION', 'FOR_REVIEW', 'FOR_APPROVAL', 'FOR_CONSTRUCTION', 'AS_BUILT'];
 
+const CHANNEL_LABEL: Record<DocumentRecord['intakeChannel'], string> = {
+  PORTAL: 'Portal', LINK: 'Upload link', WHATSAPP: 'WhatsApp', EMAIL: 'Email',
+};
+
 // Purposes the backend will only accept on an approved document; surfaced here so the control is
 // disabled rather than letting the user discover the rule through a 409.
 const APPROVAL_REQUIRED_PURPOSES = new Set(['FOR_CONSTRUCTION', 'AS_BUILT']);
@@ -100,7 +104,7 @@ export default function DocumentRegister() {
           <tr>
             <th>Document</th><th>Type / Discipline</th><th>Revision</th><th>Security</th>
             <th>Issue purpose</th><th>Status</th><th>Return code</th><th>SLA due</th>
-            <th>Last update</th><th>Issue</th>
+            <th>Source</th><th>Last update</th><th>Issue</th>
           </tr>
         </thead>
         <tbody>
@@ -120,6 +124,10 @@ export default function DocumentRegister() {
             <td><span className={`ec-badge ${badge(d.status)}`}>{d.status.replaceAll('_', ' ')}</span></td>
             <td>{d.reviewOutcome || '—'}</td>
             <td>{d.dueAt ? new Date(d.dueAt).toLocaleDateString() : '—'}</td>
+            <td>
+              <span className={`ec-badge ${d.intakeChannel === 'PORTAL' ? '' : 'teal'}`}>{CHANNEL_LABEL[d.intakeChannel]}</span>
+              {d.uploaderName && <><br /><small>{d.uploaderName}</small></>}
+            </td>
             <td>{new Date(d.updatedAt).toLocaleDateString()}</td>
             <td>
               <button
@@ -133,7 +141,7 @@ export default function DocumentRegister() {
               </button>
             </td>
           </tr>)}
-          {!filtered.length && <tr><td colSpan={10}><div className="ec-empty">No documents match the current authorization scope and filter.</div></td></tr>}
+          {!filtered.length && <tr><td colSpan={11}><div className="ec-empty">No documents match the current authorization scope and filter.</div></td></tr>}
         </tbody>
       </table>
     </div>

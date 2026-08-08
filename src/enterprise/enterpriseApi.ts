@@ -4,7 +4,8 @@ export type Project = { id:string; name:string; projectCode:string; description?
 export type ProjectParticipant = { id:string; organizationId:string; organizationName:string; organizationCode?:string; partyRole:string; engagedByParticipantId?:string; active:boolean };
 export type CommercialOverview = { projectId:string; projectCode:string; projectName:string; currency:string; contractValue:number; submittedIpc:number; certifiedIpc:number; paidToDate:number; retentionHeld:number; remainingBudget:number; approvedWorkEvidence:number; approvedButUnclaimed:number; certifiedPercent:number; paidPercent:number; ipcCount:number; documentCount:number; overdueDocumentSla:number; dueNext7Days:number; forecast:{forecastFinalCost:number;certifiedUnpaidExposure:number;contractEndDate?:string;risk:'LOW'|'MEDIUM'|'HIGH'}; suggestions:string[]; aiNarrative?:string|null };
 export type PaymentApplication = { id:string; projectId:string; applicationRef:string; claimedByOrgName:string; periodStart:string; periodEnd:string; grossClaimed:number; previouslyCertified:number; retentionPercent:number; retentionAmount:number; netCertified:number; currency:string; status:string; submittedAt?:string; certifiedByEmail?:string; certifiedAt?:string };
-export type DocumentRecord = { id:string; title:string; docType:string; status:string; projectId?:string; originatorOrgId?:string; documentCode?:string; dueAt?:string; reviewOutcome?:string; currentVersion:number; currentRevisionCode?:string; securityClassification?:'PROJECT'|'ORGANIZATION'|'RESTRICTED'; discipline?:string; packageCode?:string; locationCode?:string; issuePurpose?:string; issuedAt?:string; updatedAt:string };
+export type DocumentRecord = { id:string; title:string; docType:string; status:string; projectId?:string; originatorOrgId?:string; documentCode?:string; dueAt?:string; reviewOutcome?:string; currentVersion:number; currentRevisionCode?:string; securityClassification?:'PROJECT'|'ORGANIZATION'|'RESTRICTED'; discipline?:string; packageCode?:string; locationCode?:string; issuePurpose?:string; issuedAt?:string; intakeChannel:'PORTAL'|'LINK'|'WHATSAPP'|'EMAIL'; uploaderName?:string; uploaderEmail?:string; updatedAt:string };
+export type UploadLink = { id:string; label:string; docType:string; projectId?:string; url:string; requiresPassword:boolean; maxUploads?:number; uploadCount:number; expiresAt:string; revokedAt?:string; createdAt:string };
 export type IssuedRevision = { documentId:string; documentCode?:string; title:string; docType:string; versionId:string; versionNum:number; revisionCode:string; purpose?:string; issuedAt?:string };
 /** The register is paginated server-side; hasMore avoids a second count request. */
 export type DocumentPage = {
@@ -84,4 +85,7 @@ export const enterpriseApi = {
   commitments:(projectId:string)=>http.get<Commitment[]>(`/projects/${projectId}/commercial-facts/commitments`),
   materialReceipts:(projectId:string)=>http.get<MaterialReceipt[]>(`/projects/${projectId}/commercial-facts/materials`),
   variations:(projectId:string)=>http.get<Variation[]>(`/projects/${projectId}/commercial-facts/variations`),
+  uploadLinks:()=>http.get<UploadLink[]>('/document-upload-links'),
+  createUploadLink:(request:{projectId?:string;docType:string;label:string;password?:string;expiresAt:string;maxUploads?:number})=>http.post<UploadLink>('/document-upload-links',request),
+  revokeUploadLink:(id:string)=>http.post<void>(`/document-upload-links/${id}/revoke`,{}),
 };
