@@ -15,7 +15,7 @@ export default function ForecastIntelligence(){
   const [refreshing,setRefreshing]=useState(false);
 
   useEffect(()=>{enterpriseApi.projects().then(p=>{setProjects(p);if(p.length)setProjectId(p[0].id)}).catch(e=>setError(String(e)))},[]);
-  useEffect(()=>{if(!projectId)return;setError('');forecastApi.dashboard(projectId).then(setData).catch(e=>setError(String(e)))},[projectId]);
+  useEffect(()=>{if(!projectId)return;forecastApi.dashboard(projectId).then(d=>{setError('');setData(d)}).catch(e=>setError(String(e)))},[projectId]);
 
   const refresh=()=>{if(!projectId)return;setRefreshing(true);setError('');forecastApi.refresh(projectId).then(setData).catch(e=>setError(String(e))).finally(()=>setRefreshing(false));};
   const latest=data?.latest;
