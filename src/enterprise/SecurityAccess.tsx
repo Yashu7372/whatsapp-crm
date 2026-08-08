@@ -10,7 +10,7 @@ export default function SecurityAccess(){
   const [error,setError]=useState(''),[message,setMessage]=useState('');
   useEffect(()=>{Promise.all([enterpriseApi.projects(),enterpriseApi.documents()]).then(([p,d])=>{setProjects(p);setDocs(d);if(p.length)setProjectId(p[0].id)}).catch(e=>setError(String(e)))},[]);
   const loadProject=async(id:string)=>{if(!id)return;const [p,o,a]=await Promise.all([enterpriseApi.participants(id),enterpriseApi.capabilityOverrides(id),enterpriseApi.permissionAudit(id)]);setParticipants(p);setOverrides(o);setAudit(a)};
-  useEffect(()=>{void loadProject(projectId).catch(e=>setError(String(e)))},[projectId]);
+  useEffect(()=>{if(!projectId)return;Promise.all([enterpriseApi.participants(projectId),enterpriseApi.capabilityOverrides(projectId),enterpriseApi.permissionAudit(projectId)]).then(([p,o,a])=>{setParticipants(p);setOverrides(o);setAudit(a)}).catch(e=>setError(String(e)))},[projectId]);
   const projectDocs=useMemo(()=>docs.filter(d=>d.projectId===projectId),[docs,projectId]);
   const selected=projectDocs.find(d=>d.id===documentId);
   const selectDocument=(id:string)=>{setDocumentId(id);const d=projectDocs.find(x=>x.id===id);setClassification(d?.securityClassification||'PROJECT')};
