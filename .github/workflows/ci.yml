@@ -31,11 +31,13 @@ jobs:
       - name: TypeScript and Vite build
         run: npm run build
 
-      - name: Lint project-controls change set
+      - name: Lint enterprise change set
         run: >-
           npx eslint
           src/App.tsx
           src/enterprise/EnterpriseLayout.tsx
+          src/enterprise/DocumentRegister.tsx
+          src/enterprise/Transmittals.tsx
           src/enterprise/ProjectControls.tsx
           src/enterprise/ResourceCosts.tsx
           src/enterprise/CommercialFacts.tsx
