@@ -16,9 +16,8 @@ export default function ProjectControls(){
   useEffect(()=>{enterpriseApi.projects().then(p=>{setProjects(p);if(p.length)setProjectId(p[0].id)}).catch(e=>setError(String(e)))},[]);
   useEffect(()=>{
     if(!projectId)return;
-    setError('');setSummary(null);setContracts([]);setBudget(undefined);setForecasts([]);
     Promise.all([enterpriseApi.controlsSummary(projectId),enterpriseApi.projectContracts(projectId),enterpriseApi.forecasts(projectId)])
-      .then(([s,c,f])=>{setSummary(s);setContracts(c);setForecasts(f);return enterpriseApi.currentBudget(projectId).catch(()=>undefined)})
+      .then(([s,c,f])=>{setError('');setSummary(s);setContracts(c);setForecasts(f);return enterpriseApi.currentBudget(projectId).catch(()=>undefined)})
       .then(setBudget)
       .catch(e=>setError(String(e)));
   },[projectId]);
