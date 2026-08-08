@@ -9,9 +9,9 @@ export default function CommercialFacts(){
   const [summary,setSummary]=useState<CommercialFactSummary|null>(null),[commitments,setCommitments]=useState<Commitment[]>([]),[materials,setMaterials]=useState<MaterialReceipt[]>([]),[variations,setVariations]=useState<Variation[]>([]),[error,setError]=useState('');
 
   useEffect(()=>{enterpriseApi.projects().then(p=>{setProjects(p);if(p.length)setProjectId(p[0].id)}).catch(e=>setError(String(e)))},[]);
-  useEffect(()=>{if(!projectId)return;setError('');Promise.all([
+  useEffect(()=>{if(!projectId)return;Promise.all([
     enterpriseApi.commercialFactSummary(projectId),enterpriseApi.commitments(projectId),enterpriseApi.materialReceipts(projectId),enterpriseApi.variations(projectId)
-  ]).then(([s,c,m,v])=>{setSummary(s);setCommitments(c);setMaterials(m);setVariations(v)}).catch(e=>setError(String(e)))},[projectId]);
+  ]).then(([s,c,m,v])=>{setError('');setSummary(s);setCommitments(c);setMaterials(m);setVariations(v)}).catch(e=>setError(String(e)))},[projectId]);
 
   const currency=commitments[0]?.currency||materials[0]?.currency||variations[0]?.currency||'AED';
   const variationPressure=useMemo(()=>variations.filter(v=>v.status==='PROPOSED'||v.status==='UNDER_REVIEW').sort((a,b)=>b.requestedAmount-a.requestedAmount).slice(0,5),[variations]);
