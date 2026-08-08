@@ -1,0 +1,17 @@
+import { useEffect, useMemo, useState } from 'react';
+import { enterpriseApi, type ApprovalWorkItem } from './enterpriseApi';
+
+const badge=(s:string)=>s==='OVERDUE'?'red':s==='DUE_SOON'?'amber':s==='ON_TRACK'?'green':'teal';
+export default function ApprovalInbox(){
+  const [items,setItems]=useState<ApprovalWorkItem[]>([]),[error,setError]=useState(''),[busy,setBusy]=useState('');
+  const load=()=>enterpriseApi.approvalWorklist().then(v=>{setItems(v);setError('')}).catch(e=>setError(String(e)));
+  useEffect(()=>{load()},[]);
+  const counts=useMemo(()=>({overdue:items.filter(x=>x.slaStatus==='OVERDUE').length,due:items.filter(x=>x.slaStatus==='DUE_SOON').length,all:items.length}),[items]);
+  const decide=async(x:ApprovalWorkItem,decision:'APPROVED'|'REJECTED')=>{setBusy(x.approvalId);setError('');try{await enterpriseApi.decideApproval(x.approvalId,{decision,comments:decision==='APPROVED'?'Approved from enterprise worklist':'Rejected from enterprise worklist'});await load()}catch(e){setError(String(e))}finally{setBusy('')}};
+  const refresh=async()=>{setError('');try{await enterpriseApi.refreshApprovalEscalations();await load()}catch(e){setError(String(e))}};
+  return <div className="ec-page"><header className="ec-topbar"><div className="ec-title"><h1>Approval Inbox</h1><p>Your current contractual actions, filtered by workflow authority and assignment.</p></div><button className="ec-button" onClick={()=>void refresh()}>Refresh escalations</button></header>{error&&<div className="ec-error">{error}</div>}
+    <section className="ec-grid ec-three"><div className="ec-card"><div className="ec-kpi-label">My actions</div><div className="ec-kpi-value">{counts.all}</div></div><div className="ec-card"><div className="ec-kpi-label">Due soon</div><div className="ec-kpi-value">{counts.due}</div></div><div className="ec-card"><div className="ec-kpi-label">Overdue</div><div className="ec-kpi-value">{counts.overdue}</div></div></section>
+    <section className="ec-section"><div className="ec-table-wrap"><table className="ec-table"><thead><tr><th>Document</th><th>Stage</th><th>Authority</th><th>Assignment</th><th>SLA</th><th>Due</th><th>Action</th></tr></thead><tbody>{items.map(x=><tr key={x.stepId}><td><div className="ec-doc-code">{x.documentCode||'Unnumbered'}</div><div>{x.title}</div></td><td>{x.stepName||`Step ${x.stepIndex+1}`}</td><td>{x.authorityType.replaceAll('_',' ')}</td><td>{x.assignmentType}</td><td><span className={`ec-badge ${badge(x.slaStatus)}`}>{x.slaStatus.replaceAll('_',' ')}</span></td><td>{x.dueAt?new Date(x.dueAt).toLocaleString():'—'}</td><td><div style={{display:'flex',gap:6}}><button className="ec-button" disabled={busy===x.approvalId} onClick={()=>void decide(x,'APPROVED')}>Approve</button><button className="ec-button" disabled={busy===x.approvalId} onClick={()=>void decide(x,'REJECTED')}>Reject</button></div></td></tr>)}{!items.length&&<tr><td colSpan={7}><div className="ec-empty">No approval actions are assigned to your current project/company authority.</div></td></tr>}</tbody></table></div></section>
+    <section className="ec-card ec-section"><div className="ec-card-title"><h2>Authority policy</h2><span>Server enforced</span></div><div className="ec-insight"><div className="ec-insight-dot"/><div>Contractor internal review, consultant technical review, client final approval and commercial certification are separate permissions. A named assignment never overrides the required project-side authority.</div></div></section>
+  </div>;
+}
