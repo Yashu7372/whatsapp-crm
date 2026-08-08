@@ -12,9 +12,9 @@ export default function ResourceCosts(){
   const [error,setError]=useState('');
 
   useEffect(()=>{enterpriseApi.projects().then(p=>{setProjects(p);if(p.length)setProjectId(p[0].id)}).catch(e=>setError(String(e)))},[]);
-  useEffect(()=>{if(!projectId)return;setError('');Promise.all([
+  useEffect(()=>{if(!projectId)return;Promise.all([
     enterpriseApi.resourceCostSummary(projectId),enterpriseApi.projectResources(projectId),enterpriseApi.actualCosts(projectId)
-  ]).then(([s,r,c])=>{setSummary(s);setResources(r);setCosts(c)}).catch(e=>setError(String(e)))},[projectId]);
+  ]).then(([s,r,c])=>{setError('');setSummary(s);setResources(r);setCosts(c)}).catch(e=>setError(String(e)))},[projectId]);
 
   const currency=costs[0]?.currency??projects.find(p=>p.id===projectId)?.currency??'AED';
   const byOrg=useMemo(()=>Array.from(costs.reduce((m,c)=>m.set(c.organizationName,(m.get(c.organizationName)??0)+c.amount),new Map<string,number>()).entries()).sort((a,b)=>b[1]-a[1]).slice(0,6),[costs]);
