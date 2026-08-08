@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { enterpriseApi, type CapabilityOverride, type DocumentRecord, type PermissionAudit, type Project, type ProjectParticipant } from './enterpriseApi';
 
-const permissions=['DOCUMENT_VIEW','DOCUMENT_CREATE','DOCUMENT_EDIT','DOCUMENT_ISSUE','DOCUMENT_REVIEW_INTERNAL','DOCUMENT_REVIEW_TECHNICAL','DOCUMENT_APPROVE_CLIENT','DOCUMENT_CERTIFY_COMMERCIAL','TRANSMITTAL_VIEW','TRANSMITTAL_CREATE','TRANSMITTAL_ISSUE','TRANSMITTAL_ACKNOWLEDGE','COMMERCIAL_VIEW_PROJECT','COMMERCIAL_VIEW_ORGANIZATION','BUDGET_EDIT_PROJECT','FORECAST_SUBMIT_ORGANIZATION','PAYMENT_VIEW_PROJECT','PAYMENT_VIEW_ORGANIZATION','PAYMENT_CREATE_ORGANIZATION','PAYMENT_CERTIFY','PAYMENT_MARK_PAID'];
+const permissions=['DOCUMENT_VIEW','DOCUMENT_CREATE','DOCUMENT_EDIT','DOCUMENT_ISSUE','DOCUMENT_SECURITY_ADMIN','DOCUMENT_REVIEW_INTERNAL','DOCUMENT_REVIEW_TECHNICAL','DOCUMENT_APPROVE_CLIENT','DOCUMENT_CERTIFY_COMMERCIAL','TRANSMITTAL_VIEW','TRANSMITTAL_CREATE','TRANSMITTAL_ISSUE','TRANSMITTAL_ACKNOWLEDGE','COMMERCIAL_VIEW_PROJECT','COMMERCIAL_VIEW_ORGANIZATION','BUDGET_EDIT_PROJECT','FORECAST_SUBMIT_ORGANIZATION','PAYMENT_VIEW_PROJECT','PAYMENT_VIEW_ORGANIZATION','PAYMENT_CREATE_ORGANIZATION','PAYMENT_CERTIFY','PAYMENT_MARK_PAID'];
 export default function SecurityAccess(){
   const [projects,setProjects]=useState<Project[]>([]),[projectId,setProjectId]=useState(''),[docs,setDocs]=useState<DocumentRecord[]>([]),[participants,setParticipants]=useState<ProjectParticipant[]>([]);
   const [overrides,setOverrides]=useState<CapabilityOverride[]>([]),[audit,setAudit]=useState<PermissionAudit[]>([]);
   const [documentId,setDocumentId]=useState(''),[classification,setClassification]=useState('PROJECT'),[organizationId,setOrganizationId]=useState('');
   const [partyRole,setPartyRole]=useState('CONTRACTOR'),[userRole,setUserRole]=useState('MANAGER'),[permission,setPermission]=useState('DOCUMENT_VIEW'),[effect,setEffect]=useState<'ALLOW'|'DENY'>('ALLOW'),[scope,setScope]=useState<'PROJECT'|'ORGANIZATION'|'ASSIGNED'>('ORGANIZATION');
   const [error,setError]=useState(''),[message,setMessage]=useState('');
-  useEffect(()=>{Promise.all([enterpriseApi.projects(),enterpriseApi.documents()]).then(([p,d])=>{setProjects(p);setDocs(d);if(p.length)setProjectId(p[0].id)}).catch(e=>setError(String(e)))},[]);
+  // The register is paginated server-side; the security screen needs a wide page because it filters
+  // documents down to one project client-side.
+  useEffect(()=>{Promise.all([enterpriseApi.projects(),enterpriseApi.documents(0,200)]).then(([p,d])=>{setProjects(p);setDocs(d.documents);if(p.length)setProjectId(p[0].id)}).catch(e=>setError(String(e)))},[]);
   const loadProject=async(id:string)=>{if(!id)return;const [p,o,a]=await Promise.all([enterpriseApi.participants(id),enterpriseApi.capabilityOverrides(id),enterpriseApi.permissionAudit(id)]);setParticipants(p);setOverrides(o);setAudit(a)};
   useEffect(()=>{if(!projectId)return;Promise.all([enterpriseApi.participants(projectId),enterpriseApi.capabilityOverrides(projectId),enterpriseApi.permissionAudit(projectId)]).then(([p,o,a])=>{setParticipants(p);setOverrides(o);setAudit(a)}).catch(e=>setError(String(e)))},[projectId]);
   const projectDocs=useMemo(()=>docs.filter(d=>d.projectId===projectId),[docs,projectId]);

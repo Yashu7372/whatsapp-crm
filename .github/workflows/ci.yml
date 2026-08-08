@@ -26,20 +26,8 @@ jobs:
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: TypeScript and Vite build
         run: npm run build
-      - name: Lint enterprise change set
-        run: >-
-          npx eslint
-          src/App.tsx
-          src/enterprise/EnterpriseLayout.tsx
-          src/enterprise/DocumentRegister.tsx
-          src/enterprise/Transmittals.tsx
-          src/enterprise/WorkflowControl.tsx
-          src/enterprise/ApprovalInbox.tsx
-          src/enterprise/SecurityAccess.tsx
-          src/enterprise/NotificationCenter.tsx
-          src/enterprise/ProjectControls.tsx
-          src/enterprise/ResourceCosts.tsx
-          src/enterprise/CommercialFacts.tsx
-          src/enterprise/ForecastIntelligence.tsx
-          src/enterprise/enterpriseApi.ts
-          src/enterprise/forecastApi.ts
+      # Lints the enterprise area as a directory rather than a hand-maintained file list. The old
+      # allowlist silently excluded any new file until someone remembered to add it, which is how
+      # lint errors reached the branch in files that were nominally covered.
+      - name: Lint enterprise and app entrypoint
+        run: npx eslint src/App.tsx src/enterprise
