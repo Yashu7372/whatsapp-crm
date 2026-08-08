@@ -14,115 +14,49 @@ export type Project = {
 };
 
 export type CommercialOverview = {
-  projectId: string;
-  projectCode: string;
-  projectName: string;
-  currency: string;
-  contractValue: number;
-  submittedIpc: number;
-  certifiedIpc: number;
-  paidToDate: number;
-  retentionHeld: number;
-  remainingBudget: number;
-  approvedWorkEvidence: number;
-  approvedButUnclaimed: number;
-  certifiedPercent: number;
-  paidPercent: number;
-  ipcCount: number;
-  documentCount: number;
-  overdueDocumentSla: number;
-  dueNext7Days: number;
-  forecast: {
-    forecastFinalCost: number;
-    certifiedUnpaidExposure: number;
-    contractEndDate?: string;
-    risk: 'LOW' | 'MEDIUM' | 'HIGH';
-  };
-  suggestions: string[];
-  aiNarrative?: string | null;
+  projectId: string; projectCode: string; projectName: string; currency: string; contractValue: number;
+  submittedIpc: number; certifiedIpc: number; paidToDate: number; retentionHeld: number; remainingBudget: number;
+  approvedWorkEvidence: number; approvedButUnclaimed: number; certifiedPercent: number; paidPercent: number;
+  ipcCount: number; documentCount: number; overdueDocumentSla: number; dueNext7Days: number;
+  forecast: { forecastFinalCost: number; certifiedUnpaidExposure: number; contractEndDate?: string; risk: 'LOW'|'MEDIUM'|'HIGH' };
+  suggestions: string[]; aiNarrative?: string|null;
 };
 
 export type PaymentApplication = {
-  id: string;
-  projectId: string;
-  applicationRef: string;
-  claimedByOrgName: string;
-  periodStart: string;
-  periodEnd: string;
-  grossClaimed: number;
-  previouslyCertified: number;
-  retentionPercent: number;
-  retentionAmount: number;
-  netCertified: number;
-  currency: string;
-  status: string;
-  submittedAt?: string;
-  certifiedByEmail?: string;
-  certifiedAt?: string;
+  id: string; projectId: string; applicationRef: string; claimedByOrgName: string; periodStart: string; periodEnd: string;
+  grossClaimed: number; previouslyCertified: number; retentionPercent: number; retentionAmount: number; netCertified: number;
+  currency: string; status: string; submittedAt?: string; certifiedByEmail?: string; certifiedAt?: string;
 };
 
 export type DocumentRecord = {
-  id: string;
-  title: string;
-  docType: string;
-  status: string;
-  projectId?: string;
-  documentCode?: string;
-  dueAt?: string;
-  approvedValue?: number;
-  reviewOutcome?: string;
-  currentVersion: number;
-  updatedAt: string;
+  id: string; title: string; docType: string; status: string; projectId?: string; originatorOrgId?: string;
+  documentCode?: string; dueAt?: string; reviewOutcome?: string; currentVersion: number; currentRevisionCode?: string;
+  securityClassification?: 'PROJECT'|'ORGANIZATION'|'RESTRICTED'; discipline?: string; packageCode?: string;
+  locationCode?: string; issuePurpose?: string; issuedAt?: string; updatedAt: string;
+};
+
+export type Transmittal = {
+  id: string; transmittalNo: string; senderOrganizationId: string; senderOrganizationName: string;
+  purpose: string; subject?: string; status: string; issuedAt?: string; createdAt: string;
+  itemCount: number; recipientCount: number;
 };
 
 export type ControlsSummary = {
-  projectId: string;
-  projectCode: string;
-  projectName: string;
-  currency: string;
-  projectContractValue: number;
-  partyOriginalContracts: number;
-  approvedContractChanges: number;
-  currentBudget: number;
-  committedCost: number;
-  actualCost: number;
-  estimateToComplete: number;
-  forecastFinalCost: number;
-  forecastVariance: number;
-  visibilityScope: 'PROJECT' | 'ORGANIZATION';
-  latestForecast?: ForecastSnapshot | null;
+  projectId: string; projectCode: string; projectName: string; currency: string; projectContractValue: number;
+  partyOriginalContracts: number; approvedContractChanges: number; currentBudget: number; committedCost: number;
+  actualCost: number; estimateToComplete: number; forecastFinalCost: number; forecastVariance: number;
+  visibilityScope: 'PROJECT'|'ORGANIZATION'; latestForecast?: ForecastSnapshot|null;
 };
 
 export type ProjectContract = {
-  id: string;
-  participantId: string;
-  organizationId: string;
-  organizationName: string;
-  partyRole: string;
-  contractRef: string;
-  commercialModel: string;
-  originalValue: number;
-  approvedVariations: number;
-  currentValue: number;
-  currency: string;
-  startDate?: string;
-  endDate?: string;
-  status: string;
+  id: string; participantId: string; organizationId: string; organizationName: string; partyRole: string; contractRef: string;
+  commercialModel: string; originalValue: number; approvedVariations: number; currentValue: number; currency: string;
+  startDate?: string; endDate?: string; status: string;
 };
 
 export type BudgetLine = {
-  id: string;
-  parentLineId?: string | null;
-  costCode: string;
-  name: string;
-  originalBudget: number;
-  approvedChanges: number;
-  currentBudget: number;
-  committedCost: number;
-  actualCost: number;
-  estimateToComplete: number;
-  forecastFinalCost: number;
-  sortOrder: number;
+  id: string; parentLineId?: string|null; costCode: string; name: string; originalBudget: number; approvedChanges: number;
+  currentBudget: number; committedCost: number; actualCost: number; estimateToComplete: number; forecastFinalCost: number; sortOrder: number;
 };
 
 export type BudgetView = {
@@ -132,65 +66,34 @@ export type BudgetView = {
 };
 
 export type ForecastSnapshot = {
-  id: string;
-  sourceOrganizationId?: string;
-  sourceOrganizationName?: string;
-  snapshotDate: string;
-  forecastFinalCost: number;
-  estimateToComplete: number;
-  physicalProgressPercent?: number;
-  scheduleProgressPercent?: number;
-  notes?: string;
+  id: string; sourceOrganizationId?: string; sourceOrganizationName?: string; snapshotDate: string; forecastFinalCost: number;
+  estimateToComplete: number; physicalProgressPercent?: number; scheduleProgressPercent?: number; notes?: string;
 };
 
 export type ResourceCostSummary = {
-  labourCost: number;
-  equipmentCost: number;
-  manualCost: number;
-  totalActualCost: number;
-  activeResources: number;
-  pendingTimesheets: number;
-  visibilityScope: 'PROJECT' | 'ORGANIZATION';
+  labourCost: number; equipmentCost: number; manualCost: number; totalActualCost: number; activeResources: number;
+  pendingTimesheets: number; visibilityScope: 'PROJECT'|'ORGANIZATION';
 };
 
 export type ProjectResource = {
-  id: string;
-  organizationId: string;
-  organizationName: string;
-  resourceType: 'PERSON' | 'EQUIPMENT' | 'MACHINE' | 'VEHICLE';
-  resourceCode: string;
-  displayName: string;
-  userId?: string;
-  active: boolean;
+  id: string; organizationId: string; organizationName: string; resourceType: 'PERSON'|'EQUIPMENT'|'MACHINE'|'VEHICLE';
+  resourceCode: string; displayName: string; userId?: string; active: boolean;
 };
 
 export type ActualCostEntry = {
-  id: string;
-  organizationId: string;
-  organizationName: string;
-  budgetLineId?: string;
-  costCode?: string;
-  resourceId?: string;
-  resourceName?: string;
-  sourceType: 'TIMESHEET' | 'EQUIPMENT_USAGE' | 'MANUAL';
-  costDate: string;
-  quantity: number;
-  amount: number;
-  currency: string;
-  description?: string;
+  id: string; organizationId: string; organizationName: string; budgetLineId?: string; costCode?: string;
+  resourceId?: string; resourceName?: string; sourceType: 'TIMESHEET'|'EQUIPMENT_USAGE'|'MANUAL'; costDate: string;
+  quantity: number; amount: number; currency: string; description?: string;
 };
 
 export type CommercialFactSummary = {
-  activeCommitments: number;
-  acceptedMaterialActual: number;
-  pendingVariationExposure: number;
-  approvedVariations: number;
-  visibilityScope: 'PROJECT' | 'ORGANIZATION';
+  activeCommitments: number; acceptedMaterialActual: number; pendingVariationExposure: number; approvedVariations: number;
+  visibilityScope: 'PROJECT'|'ORGANIZATION';
 };
 
 export type Commitment = {
   id: string; organizationId: string; organizationName: string; budgetLineId?: string; costCode?: string;
-  commitmentType: 'PURCHASE_ORDER' | 'SUBCONTRACT' | 'OTHER'; referenceNo: string; description?: string;
+  commitmentType: 'PURCHASE_ORDER'|'SUBCONTRACT'|'OTHER'; referenceNo: string; description?: string;
   originalAmount: number; approvedChanges: number; currentAmount: number; currency: string; status: string;
   startDate?: string; endDate?: string;
 };
@@ -212,29 +115,28 @@ export const enterpriseApi = {
   projects: () => http.get<Project[]>('/projects?status=ACTIVE'),
   commercialOverview: (projectId: string, includeAi = true) =>
     http.get<CommercialOverview>(`/projects/${projectId}/commercial/overview?includeAi=${includeAi}`),
-  paymentApplications: (projectId: string) =>
-    http.get<PaymentApplication[]>(`/payment-applications?projectId=${projectId}`),
+  paymentApplications: (projectId: string) => http.get<PaymentApplication[]>(`/payment-applications?projectId=${projectId}`),
   documents: () => http.get<DocumentRecord[]>('/documents'),
-  controlsSummary: (projectId: string) =>
-    http.get<ControlsSummary>(`/projects/${projectId}/controls/summary`),
-  projectContracts: (projectId: string) =>
-    http.get<ProjectContract[]>(`/projects/${projectId}/controls/contracts`),
-  currentBudget: (projectId: string) =>
-    http.get<BudgetView | undefined>(`/projects/${projectId}/controls/budget`),
-  forecasts: (projectId: string) =>
-    http.get<ForecastSnapshot[]>(`/projects/${projectId}/controls/forecasts`),
-  resourceCostSummary: (projectId: string) =>
-    http.get<ResourceCostSummary>(`/projects/${projectId}/resource-costs/summary`),
-  projectResources: (projectId: string) =>
-    http.get<ProjectResource[]>(`/projects/${projectId}/resource-costs/resources`),
-  actualCosts: (projectId: string) =>
-    http.get<ActualCostEntry[]>(`/projects/${projectId}/resource-costs/actual-costs`),
-  commercialFactSummary: (projectId: string) =>
-    http.get<CommercialFactSummary>(`/projects/${projectId}/commercial-facts/summary`),
-  commitments: (projectId: string) =>
-    http.get<Commitment[]>(`/projects/${projectId}/commercial-facts/commitments`),
-  materialReceipts: (projectId: string) =>
-    http.get<MaterialReceipt[]>(`/projects/${projectId}/commercial-facts/materials`),
-  variations: (projectId: string) =>
-    http.get<Variation[]>(`/projects/${projectId}/commercial-facts/variations`),
+  issueCurrentRevision: (documentId: string, purpose: string) =>
+    http.post<{documentId:string;versionId:string;revisionCode:string;purpose:string}>(`/documents/${documentId}/issue`, { purpose }),
+  transmittals: (projectId: string) => http.get<Transmittal[]>(`/projects/${projectId}/transmittals`),
+  createTransmittal: (projectId: string, request: {transmittalNo:string;purpose:string;subject?:string;message?:string}) =>
+    http.post<{id:string}>(`/projects/${projectId}/transmittals`, request),
+  addTransmittalItem: (transmittalId:string,documentId:string,versionId:string) =>
+    http.post<void>(`/transmittals/${transmittalId}/items`,{documentId,versionId}),
+  addTransmittalRecipient: (transmittalId:string,organizationId:string) =>
+    http.post<void>(`/transmittals/${transmittalId}/recipients/${organizationId}`,{}),
+  issueTransmittal: (transmittalId:string) => http.post<void>(`/transmittals/${transmittalId}/issue`,{}),
+  acknowledgeTransmittal: (transmittalId:string) => http.post<void>(`/transmittals/${transmittalId}/acknowledge`,{}),
+  controlsSummary: (projectId: string) => http.get<ControlsSummary>(`/projects/${projectId}/controls/summary`),
+  projectContracts: (projectId: string) => http.get<ProjectContract[]>(`/projects/${projectId}/controls/contracts`),
+  currentBudget: (projectId: string) => http.get<BudgetView|undefined>(`/projects/${projectId}/controls/budget`),
+  forecasts: (projectId: string) => http.get<ForecastSnapshot[]>(`/projects/${projectId}/controls/forecasts`),
+  resourceCostSummary: (projectId: string) => http.get<ResourceCostSummary>(`/projects/${projectId}/resource-costs/summary`),
+  projectResources: (projectId: string) => http.get<ProjectResource[]>(`/projects/${projectId}/resource-costs/resources`),
+  actualCosts: (projectId: string) => http.get<ActualCostEntry[]>(`/projects/${projectId}/resource-costs/actual-costs`),
+  commercialFactSummary: (projectId: string) => http.get<CommercialFactSummary>(`/projects/${projectId}/commercial-facts/summary`),
+  commitments: (projectId: string) => http.get<Commitment[]>(`/projects/${projectId}/commercial-facts/commitments`),
+  materialReceipts: (projectId: string) => http.get<MaterialReceipt[]>(`/projects/${projectId}/commercial-facts/materials`),
+  variations: (projectId: string) => http.get<Variation[]>(`/projects/${projectId}/commercial-facts/variations`),
 };
