@@ -6,12 +6,14 @@ const tone=(event:string)=>event.includes('OVERDUE')?'red':event.includes('DUE_S
 export default function NotificationCenter(){
   const [notifications,setNotifications]=useState<DocumentNotification[]>([]),[prefs,setPrefs]=useState<NotificationPreferences>({emailEnabled:true,whatsappEnabled:false,whatsappNumber:''}),[audit,setAudit]=useState<NotificationDeliveryAudit[]>([]);
   const [error,setError]=useState(''),[message,setMessage]=useState(''),[saving,setSaving]=useState(false),[auditAvailable,setAuditAvailable]=useState(true);
-  const load=async()=>{
-    const [n,p]=await Promise.all([enterpriseApi.notifications(),enterpriseApi.notificationPreferences()]);
-    setNotifications(n);setPrefs({...p,whatsappNumber:p.whatsappNumber||''});
-    try{setAudit(await enterpriseApi.notificationDeliveryAudit());setAuditAvailable(true)}catch{setAudit([]);setAuditAvailable(false)}
-  };
-  useEffect(()=>{void load().catch(e=>setError(String(e)))},[]);
+  useEffect(()=>{
+    Promise.all([enterpriseApi.notifications(),enterpriseApi.notificationPreferences()])
+      .then(([n,p])=>{setNotifications(n);setPrefs({...p,whatsappNumber:p.whatsappNumber||''})})
+      .catch(e=>setError(String(e)));
+    enterpriseApi.notificationDeliveryAudit()
+      .then(a=>{setAudit(a);setAuditAvailable(true)})
+      .catch(()=>{setAudit([]);setAuditAvailable(false)});
+  },[]);
   const unread=useMemo(()=>notifications.filter(n=>!n.readAt).length,[notifications]);
   const counts=useMemo(()=>({overdue:notifications.filter(n=>n.eventType==='APPROVAL_OVERDUE'&&!n.readAt).length,actions:notifications.filter(n=>n.eventType==='APPROVAL_ASSIGNED'&&!n.readAt).length}),[notifications]);
   const mark=async(id:string)=>{setError('');try{await enterpriseApi.markNotificationRead(id);setNotifications(v=>v.map(n=>n.id===id?{...n,readAt:new Date().toISOString()}:n))}catch(e){setError(String(e))}};
