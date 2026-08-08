@@ -19,14 +19,20 @@ export default function EnterpriseDashboard() {
     }).catch(e => setError(String(e))).finally(() => setLoading(false));
   }, []);
 
-  const load = async () => {
+  useEffect(() => {
     if (!projectId) return;
-    setLoading(true); setError('');
-    try { setData(await enterpriseApi.commercialOverview(projectId, true)); }
-    catch (e) { setError(String(e)); }
-    finally { setLoading(false); }
-  };
-  useEffect(() => { void load(); }, [projectId]);
+    enterpriseApi.commercialOverview(projectId, true)
+      .then(d => { setData(d); setError(''); })
+      .catch(e => setError(String(e)))
+      .finally(() => setLoading(false));
+  }, [projectId]);
+
+  const load = () => projectId
+    ? enterpriseApi.commercialOverview(projectId, true)
+        .then(d => { setData(d); setError(''); })
+        .catch(e => setError(String(e)))
+        .finally(() => setLoading(false))
+    : undefined;
 
   const riskClass = useMemo(() => data?.forecast.risk === 'HIGH' ? 'red' : data?.forecast.risk === 'MEDIUM' ? 'amber' : 'green', [data]);
 

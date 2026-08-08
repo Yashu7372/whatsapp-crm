@@ -6,6 +6,13 @@ export type CommercialOverview = { projectId:string; projectCode:string; project
 export type PaymentApplication = { id:string; projectId:string; applicationRef:string; claimedByOrgName:string; periodStart:string; periodEnd:string; grossClaimed:number; previouslyCertified:number; retentionPercent:number; retentionAmount:number; netCertified:number; currency:string; status:string; submittedAt?:string; certifiedByEmail?:string; certifiedAt?:string };
 export type DocumentRecord = { id:string; title:string; docType:string; status:string; projectId?:string; originatorOrgId?:string; documentCode?:string; dueAt?:string; reviewOutcome?:string; currentVersion:number; currentRevisionCode?:string; securityClassification?:'PROJECT'|'ORGANIZATION'|'RESTRICTED'; discipline?:string; packageCode?:string; locationCode?:string; issuePurpose?:string; issuedAt?:string; updatedAt:string };
 export type IssuedRevision = { documentId:string; documentCode?:string; title:string; docType:string; versionId:string; versionNum:number; revisionCode:string; purpose?:string; issuedAt?:string };
+/** The register is paginated server-side; hasMore avoids a second count request. */
+export type DocumentPage = {
+  documents: DocumentRecord[]; page: number; size: number; hasMore: boolean;
+};
+
+export type Organization = { id: string; name: string; orgCode: string; active: boolean };
+
 export type Transmittal = { id:string; transmittalNo:string; senderOrganizationId:string; senderOrganizationName:string; purpose:string; subject?:string; status:string; issuedAt?:string; createdAt:string; itemCount:number; recipientCount:number };
 export type TransmittalDetail = { header:{id:string;projectId:string;transmittalNo:string;senderOrganizationId:string;senderOrganizationName:string;purpose:string;subject?:string;message?:string;status:string;createdAt:string;issuedAt?:string}; items:Array<{id:string;documentId:string;versionId:string;documentCode?:string;title:string;revisionCode:string;issuePurpose?:string;createdAt:string}>; recipients:Array<{id:string;organizationId:string;organizationName:string;createdAt:string;acknowledgedAt?:string;acknowledgedByEmail?:string}>; history:Array<{eventType:string;at:string;subject?:string;detail?:string}> };
 export type Workflow = { id:string; name:string; docType:string; steps:string; active:boolean; createdAt:string; updatedAt:string };
@@ -34,7 +41,8 @@ export const enterpriseApi = {
   participants:(projectId:string)=>http.get<ProjectParticipant[]>(`/projects/${projectId}/participants?activeOnly=true`),
   commercialOverview:(projectId:string,includeAi=true)=>http.get<CommercialOverview>(`/projects/${projectId}/commercial/overview?includeAi=${includeAi}`),
   paymentApplications:(projectId:string)=>http.get<PaymentApplication[]>(`/payment-applications?projectId=${projectId}`),
-  documents:()=>http.get<DocumentRecord[]>('/documents'),
+  documents:(page=0,size=50,docType?:string)=>
+    http.get<DocumentPage>(`/documents?page=${page}&size=${size}${docType?`&docType=${encodeURIComponent(docType)}`:''}`),
   setDocumentSecurity:(documentId:string,request:{classification:string;discipline?:string;packageCode?:string;locationCode?:string})=>http.patch<void>(`/documents/${documentId}/security`,request),
   grantDocument:(documentId:string,request:{userId?:string;organizationId?:string;roleCode?:string;permission:string;expiresAt?:string})=>http.post<void>(`/documents/${documentId}/grants`,request),
   issueCurrentRevision:(documentId:string,purpose:string)=>http.post<{documentId:string;versionId:string;revisionCode:string;purpose:string}>(`/documents/${documentId}/issue`,{purpose}),
@@ -56,6 +64,8 @@ export const enterpriseApi = {
   setCapabilityOverride:(projectId:string,request:{partyRole:string;userRole:string;permissionCode:string;effect:'ALLOW'|'DENY';dataScope?:'PROJECT'|'ORGANIZATION'|'ASSIGNED'})=>http.put<void>(`/projects/${projectId}/capabilities`,request),
   resetCapabilityOverride:(projectId:string,partyRole:string,userRole:string,permissionCode:string)=>http.delete<void>(`/projects/${projectId}/capabilities?partyRole=${encodeURIComponent(partyRole)}&userRole=${encodeURIComponent(userRole)}&permissionCode=${encodeURIComponent(permissionCode)}`),
   permissionAudit:(projectId:string)=>http.get<PermissionAudit[]>(`/projects/${projectId}/capabilities/audit`),
+  nonOverridablePermissions:(projectId:string)=>http.get<string[]>(`/projects/${projectId}/capabilities/non-overridable`),
+  organizations:()=>http.get<Organization[]>('/organizations?activeOnly=true'),
   notifications:()=>http.get<DocumentNotification[]>('/document-notifications'),
   notificationUnread:()=>http.get<number>('/document-notifications/unread-count'),
   markNotificationRead:(id:string)=>http.post<void>(`/document-notifications/${id}/read`,{}),
