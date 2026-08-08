@@ -43,6 +43,7 @@ const BudgetIpc = lazy(() => import('./enterprise/BudgetIpc'));
 const ProjectControls = lazy(() => import('./enterprise/ProjectControls'));
 const ResourceCosts = lazy(() => import('./enterprise/ResourceCosts'));
 const CommercialFacts = lazy(() => import('./enterprise/CommercialFacts'));
+const ForecastIntelligence = lazy(() => import('./enterprise/ForecastIntelligence'));
 const EnterpriseWorkflows = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Workflows })));
 const EnterpriseTransmittals = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Transmittals })));
 const EnterpriseApprovals = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Approvals })));
@@ -105,6 +106,7 @@ export default function App() {
             <Route path="project-controls" element={<ProjectControls />} />
             <Route path="resource-costs" element={<ResourceCosts />} />
             <Route path="commercial-facts" element={<CommercialFacts />} />
+            <Route path="forecast-intelligence" element={<ForecastIntelligence />} />
             <Route path="commercial" element={<BudgetIpc />} />
             <Route path="workflows" element={<EnterpriseWorkflows />} />
             <Route path="transmittals" element={<EnterpriseTransmittals />} />
