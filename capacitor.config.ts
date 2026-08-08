@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.dhad.crm',
-  appName: 'Jeeva CRM',
+  appName: 'Dhad Digital CRM',
   webDir: 'dist',
   plugins: {
     SplashScreen: {
