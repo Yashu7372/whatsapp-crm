@@ -45,7 +45,7 @@ const ResourceCosts = lazy(() => import('./enterprise/ResourceCosts'));
 const CommercialFacts = lazy(() => import('./enterprise/CommercialFacts'));
 const ForecastIntelligence = lazy(() => import('./enterprise/ForecastIntelligence'));
 const EnterpriseWorkflows = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Workflows })));
-const EnterpriseTransmittals = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Transmittals })));
+const EnterpriseTransmittals = lazy(() => import('./enterprise/Transmittals'));
 const EnterpriseApprovals = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Approvals })));
 const EnterpriseInsights = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Insights })));
 const EnterpriseAudit = lazy(() => import('./enterprise/EnterprisePages').then(m => ({ default: m.Audit })));
@@ -70,7 +70,6 @@ export default function App() {
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/platforms/callback" element={<OAuthCallback />} />
 
-          {/* Existing application — no route removed or renamed. */}
           <Route element={<AuthGuard><DashboardLayout /></AuthGuard>}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/inbox" element={<Inbox />} />
@@ -99,7 +98,6 @@ export default function App() {
             <Route path="/media-library" element={<MediaLibrary />} />
           </Route>
 
-          {/* Enterprise document control — protected by the exact same authentication guard. */}
           <Route path="/control" element={<AuthGuard><EnterpriseLayout /></AuthGuard>}>
             <Route index element={<EnterpriseDashboard />} />
             <Route path="documents" element={<EnterpriseDocuments />} />
