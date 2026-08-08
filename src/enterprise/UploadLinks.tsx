@@ -2,10 +2,16 @@ import { useEffect, useState } from 'react';
 import { Copy, Ban } from 'lucide-react';
 import { enterpriseApi, type Project, type UploadLink } from './enterpriseApi';
 
+/** Format a Date for <input type="datetime-local"> without converting it to UTC first. */
+const toLocalDateTimeInput = (d: Date) => {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 const defaultExpiry = () => {
   const d = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   d.setSeconds(0, 0);
-  return d.toISOString().slice(0, 16);
+  return toLocalDateTimeInput(d);
 };
 
 const status = (l: UploadLink): { label: string; tone: string } => {
@@ -42,6 +48,9 @@ export default function UploadLinks() {
         docType,
         label,
         password: password || undefined,
+        // datetime-local is intentionally interpreted in the user's local timezone here; Date
+        // then converts that instant to UTC for the API payload without shifting the displayed
+        // wall-clock value beforehand.
         expiresAt: new Date(expiresAt).toISOString(),
         maxUploads: maxUploads ? Number(maxUploads) : undefined,
       });
