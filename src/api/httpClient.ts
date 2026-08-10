@@ -85,5 +85,8 @@ export function logout(): void {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('tenantId');
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith('nav_cache_v1:')) localStorage.removeItem(key);
+  }
   window.location.href = '/login';
 }
