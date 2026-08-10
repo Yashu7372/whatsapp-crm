@@ -36,6 +36,8 @@ export type CommercialFactSummary = { activeCommitments:number; acceptedMaterial
 export type Commitment = { id:string; organizationId:string; organizationName:string; budgetLineId?:string; costCode?:string; commitmentType:'PURCHASE_ORDER'|'SUBCONTRACT'|'OTHER'; referenceNo:string; description?:string; originalAmount:number; approvedChanges:number; currentAmount:number; currency:string; status:string; startDate?:string; endDate?:string };
 export type MaterialReceipt = { id:string; organizationId:string; organizationName:string; commitmentId?:string; commitmentReference?:string; budgetLineId?:string; costCode?:string; receiptRef:string; materialCode?:string; description:string; receiptDate:string; quantity:number; unit?:string; unitCost:number; amount:number; currency:string; status:string; documentId?:string };
 export type Variation = { id:string; organizationId?:string; organizationName?:string; budgetLineId?:string; costCode?:string; variationRef:string; title:string; sourceType?:string; requestedAmount:number; approvedAmount?:number; currency:string; status:string; sourceDocumentId?:string; submittedAt?:string; approvedAt?:string };
+/** No rate/amount field, ever — this is the view every role gets. Cost lives only in ActualCostEntry, which stays MANAGER/ADMIN-gated. */
+export type TimeLogEntry = { id:string; resourceId:string; resourceName:string; workDate:string; hours:number; status:string; documentId?:string; description?:string };
 
 export const enterpriseApi = {
   projects:()=>http.get<Project[]>('/projects?status=ACTIVE'),
@@ -80,7 +82,12 @@ export const enterpriseApi = {
   forecasts:(projectId:string)=>http.get<ForecastSnapshot[]>(`/projects/${projectId}/controls/forecasts`),
   resourceCostSummary:(projectId:string)=>http.get<ResourceCostSummary>(`/projects/${projectId}/resource-costs/summary`),
   projectResources:(projectId:string)=>http.get<ProjectResource[]>(`/projects/${projectId}/resource-costs/resources`),
-  actualCosts:(projectId:string)=>http.get<ActualCostEntry[]>(`/projects/${projectId}/resource-costs/actual-costs`),
+  // documentId: the "bill for this document" view — still MANAGER/ADMIN-only server-side.
+  actualCosts:(projectId:string,documentId?:string)=>http.get<ActualCostEntry[]>(`/projects/${projectId}/resource-costs/actual-costs${documentId?`?documentId=${documentId}`:''}`),
+  // Open to every role — logging/seeing your own hours, never the computed cost.
+  myResources:(projectId:string)=>http.get<ProjectResource[]>(`/projects/${projectId}/time-log/resources`),
+  timeLog:(projectId:string,documentId?:string)=>http.get<TimeLogEntry[]>(`/projects/${projectId}/time-log${documentId?`?documentId=${documentId}`:''}`),
+  submitTimeLog:(projectId:string,request:{resourceId:string;hours:number;description?:string;documentId?:string;workDate?:string})=>http.post<{id:string}>(`/projects/${projectId}/time-log`,request),
   commercialFactSummary:(projectId:string)=>http.get<CommercialFactSummary>(`/projects/${projectId}/commercial-facts/summary`),
   commitments:(projectId:string)=>http.get<Commitment[]>(`/projects/${projectId}/commercial-facts/commitments`),
   materialReceipts:(projectId:string)=>http.get<MaterialReceipt[]>(`/projects/${projectId}/commercial-facts/materials`),
