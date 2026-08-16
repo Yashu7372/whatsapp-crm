@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Bell, Bot, BriefcaseBusiness, Building2, ClipboardCheck, Clock3, FileText, FolderKanban, Gauge, MessageCircle, Settings2, ShieldCheck, UsersRound, WalletCards, Workflow } from 'lucide-react';
 import { useNav } from '../contexts/NavContext';
+import { enterpriseApi } from './enterpriseApi';
 import './enterprise.css';
 
 type NavItem = { label:string; route:string; icon:React.ComponentType<{size?:number}> };
@@ -29,13 +31,30 @@ const administration: NavItem[] = [
 
 export default function EnterpriseLayout() {
   const { items } = useNav();
+  const [unreadNotifications,setUnreadNotifications]=useState(0);
+
+  // In-app notifications are durable server records. Refresh the tiny unread-count endpoint rather
+  // than the full inbox so an assignment/overdue result becomes visible anywhere in the app without
+  // requiring a page reload. This is intentionally resilient polling, not OS-level push: FCM/APNs or
+  // Web Push requires a separate device-token/subscription channel.
+  useEffect(()=>{
+    let active=true;
+    const refresh=()=>enterpriseApi.notificationUnread()
+      .then(count=>{if(active)setUnreadNotifications(Number(count)||0)})
+      .catch(()=>{ /* Navigation must remain usable when notification transport is unavailable. */ });
+    void refresh();
+    const timer=window.setInterval(refresh,15000);
+    return()=>{active=false;window.clearInterval(timer)};
+  },[]);
+
   const catalogRoutes = new Set(items.filter(i=>i.module==='PROJECT_CONTROL').map(i=>i.route).filter(Boolean));
   // Hiding links is convenience only; every API continues to enforce authorization server-side.
   const visible = (item:NavItem) => item.route==='/control/projects' || catalogRoutes.size===0 || catalogRoutes.has(item.route);
   const links = (values:NavItem[]) => values.filter(visible).map(item => {
     const Icon=item.icon;
+    const showUnread=item.route==='/control/communications'&&unreadNotifications>0;
     return <NavLink key={item.route} to={item.route} className={({isActive})=>`ec-nav-link ${isActive?'active':''}`}>
-      <Icon size={17}/><span>{item.label}</span>
+      <Icon size={17}/><span>{item.label}</span>{showUnread&&<span aria-label={`${unreadNotifications} unread notifications`} style={{marginLeft:'auto',minWidth:20,height:20,padding:'0 6px',borderRadius:10,display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,background:'currentColor',color:'var(--ec-surface, white)'}}>{unreadNotifications>99?'99+':unreadNotifications}</span>}
     </NavLink>;
   });
 
