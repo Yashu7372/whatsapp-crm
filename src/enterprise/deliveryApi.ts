@@ -1,5 +1,7 @@
 import { http } from '../api/httpClient';
 
+export type CommercialVisibility = 'PROJECT' | 'ORGANIZATION' | 'NONE';
+
 export type ProjectDeliveryPortfolio = {
   accountName: string;
   activeProjects: number;
@@ -8,6 +10,7 @@ export type ProjectDeliveryPortfolio = {
   openWorkItems: number;
   blockedWorkItems: number;
   overdueDocuments: number;
+  commercialVisible: boolean;
   projects: ProjectDeliveryCard[];
 };
 
@@ -17,7 +20,8 @@ export type ProjectDeliveryCard = {
   name: string;
   status: string;
   currency: string;
-  contractValue: number;
+  visibleContractValue: number;
+  commercialVisibility: CommercialVisibility;
   startDate?: string;
   endDate?: string;
   progressPercent: number;
@@ -39,6 +43,7 @@ export type ProjectDeliveryDetail = {
   status: string;
   currency: string;
   contractValue: number;
+  commercialVisibility: CommercialVisibility;
   startDate?: string;
   endDate?: string;
   kpis: DeliveryKpis;
@@ -125,6 +130,7 @@ export type WorkItem = {
   actualEnd?: string;
   assignments: WorkAssignment[];
   documents: WorkDocument[];
+  commercialVisible: boolean;
 };
 
 export type WorkAssignment = {
