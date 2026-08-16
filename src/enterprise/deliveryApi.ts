@@ -131,6 +131,7 @@ export type WorkItem = {
   assignments: WorkAssignment[];
   documents: WorkDocument[];
   commercialVisible: boolean;
+  hoursVisible: boolean;
 };
 
 export type WorkAssignment = {
