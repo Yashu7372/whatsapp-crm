@@ -1,50 +1,76 @@
 # Staging UI deployment
 
-The enterprise UI can be deployed to Cloudflare Pages so the laptop is not part of the test environment.
+The enterprise UI stays available on Cloudflare Pages while the backend runs only during demo/test sessions on Google Compute Engine.
 
-Backend staging is deployed independently from `Yashu7372/whatsapp-bot` using the lightweight VPS + PostgreSQL + Cloudflare Tunnel stack documented in `docs/STAGING_VPS_DEPLOYMENT.md` in that repository.
+The authoritative backend setup is `docs/GCP_DEMO_ENVIRONMENT.md` in `Yashu7372/whatsapp-bot`.
 
 ## Runtime path
 
 ```text
 Browser
-  -> Cloudflare Pages
+  -> Cloudflare Pages (always available)
   -> React/Vite static application
-  -> https://api.<your-domain>/api/v1
-  -> Cloudflare Tunnel
-  -> Spring Boot staging VM
-  -> PostgreSQL
+  -> current https://*.trycloudflare.com/api/v1
+  -> Google Compute Engine VM (only while demo is running)
+  -> Spring Boot + PostgreSQL
 ```
 
-The frontend already reads `VITE_API_BASE_URL`, so no source-code endpoint change is required.
+The frontend already reads `VITE_API_BASE_URL`, so the backend URL is injected at build time.
+
+## Normal demo flow
+
+The backend repository workflow `Demo Environment - GCP` is the preferred entrypoint.
+
+When `start` is selected it:
+
+1. starts the Google VM;
+2. starts PostgreSQL and Spring Boot;
+3. discovers the new anonymous Quick Tunnel URL;
+4. checks out this frontend branch;
+5. builds it with `VITE_API_BASE_URL=<quick-tunnel>/api/v1`;
+6. deploys the result to the `staging` Cloudflare Pages branch;
+7. prints the frontend/backend URLs in the GitHub Actions summary.
+
+When the backend workflow is run with `stop`, the VM stops but Cloudflare Pages remains online.
 
 ## One-time Cloudflare Pages setup
 
-Create a Cloudflare Pages Direct Upload project for the staging UI. The Pages project name is used by the GitHub workflow.
+Create a Cloudflare Pages Direct Upload project, for example `enterprise-control-demo`.
 
-Create these GitHub Actions secrets on `Yashu7372/whatsapp-crm`:
+For the automated backend Start Demo workflow, store these on `Yashu7372/whatsapp-bot`:
+
+### Secrets
 
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
 
-Create these repository Actions variables:
+### Variable
 
-- `CLOUDFLARE_PAGES_PROJECT` - for example `enterprise-control-staging`
-- `STAGING_API_BASE_URL` - for example `https://api.example.com/api/v1`
-- `CLOUDFLARE_PAGES_DEPLOY_ENABLED=true`
+- `CLOUDFLARE_PAGES_PROJECT`
 
-The API token should be scoped only to the Cloudflare account/resources needed for Pages deployment.
+The Quick Tunnel itself needs no Cloudflare account or token; the token is only for publishing the React build to Pages.
 
-## Deployment workflow
+## Optional standalone frontend deployment
 
-`.github/workflows/deploy-staging-pages.yml` runs on pushes to `feature/enterprise-document-control` and can be triggered manually.
+`.github/workflows/deploy-staging-pages.yml` is manual-only. It can be used if the UI needs to be redeployed separately from the backend Start Demo workflow.
 
-It:
+When running it, provide `api_base_url` such as:
 
-1. installs Node 22 dependencies;
-2. builds the React/Vite application with `VITE_API_BASE_URL` pointing at staging;
-3. runs the enterprise-route lint check;
-4. uploads `dist/` to Cloudflare Pages using Wrangler;
-5. publishes the `staging` Pages branch alias.
+```text
+https://random-words.trycloudflare.com/api/v1
+```
 
-Until `CLOUDFLARE_PAGES_DEPLOY_ENABLED=true` is configured, push deployments are skipped so this workflow cannot break the existing branch CI before Cloudflare credentials exist.
+If `api_base_url` is omitted, it falls back to repository variable `STAGING_API_BASE_URL`.
+
+The standalone frontend workflow needs these repository secrets:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+and variable:
+
+- `CLOUDFLARE_PAGES_PROJECT`
+
+## Quick Tunnel limitation
+
+TryCloudflare Quick Tunnels are intended for demos/development and do not support Server-Sent Events (SSE). When the platform is ready for its own domain, move to a named Cloudflare Tunnel; the frontend and backend application architecture do not otherwise need to change.
