@@ -128,6 +128,14 @@ async function assertVisible(page, text) {
   await locator.waitFor({ state: 'visible', timeout: 15000 });
 }
 
+async function openConstructionStage(page) {
+  const construction = page.locator('.ec-stage-node').filter({ hasText: 'Construction' });
+  await construction.waitFor({ state: 'visible', timeout: 15000 });
+  await construction.click();
+  await assertVisible(page, 'MEP Installation');
+  await assertVisible(page, 'Level 05 HVAC duct installation and inspection');
+}
+
 const vite = spawn(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'dev', '--', '--host', '127.0.0.1', '--port', '4173'], {
   stdio: ['ignore', 'pipe', 'pipe'],
   env: { ...process.env, VITE_API_BASE_URL: '/api/v1' },
@@ -167,8 +175,7 @@ try {
 
   await page.getByRole('button', { name: /Aurelia Creek Residences/i }).click();
   await assertVisible(page, 'Construction');
-  await assertVisible(page, 'MEP Installation');
-  await assertVisible(page, 'Level 05 HVAC duct installation and inspection');
+  await openConstructionStage(page);
   await assertVisible(page, 'Inspection IR-234 returned with comments');
   await assertVisible(page, 'Sameer Ali');
   await assertVisible(page, 'Imran Shah');
@@ -180,6 +187,7 @@ try {
   await page.reload({ waitUntil: 'networkidle' });
   await assertVisible(page, 'Commercial information');
   await assertVisible(page, 'Restricted');
+  await openConstructionStage(page);
   await assertVisible(page, 'Rates, budget and cost are restricted');
   await assertVisible(page, '186.5 h');
   await page.screenshot({ path: `${outputDir}/04-project-drilldown-worker-restricted.png`, fullPage: true });
