@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { enterpriseApi, type IssuedRevision, type Project, type ProjectParticipant, type Transmittal, type TransmittalDetail } from './enterpriseApi';
 
 const badge=(s:string)=>s==='ACKNOWLEDGED'?'green':s==='ISSUED'||s==='PARTIALLY_ACKNOWLEDGED'?'amber':'teal';
@@ -7,7 +7,8 @@ export default function Transmittals(){
   const [items,setItems]=useState<Transmittal[]>([]),[revisions,setRevisions]=useState<IssuedRevision[]>([]),[participants,setParticipants]=useState<ProjectParticipant[]>([]);
   const [activeDraft,setActiveDraft]=useState(''),[selectedRevision,setSelectedRevision]=useState(''),[selectedRecipient,setSelectedRecipient]=useState(''),[detail,setDetail]=useState<TransmittalDetail|null>(null);
   const [number,setNumber]=useState(''),[purpose,setPurpose]=useState('FOR_INFORMATION'),[subject,setSubject]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
-  const reload=async(id:string)=>{if(!id)return;const [t,r,p]=await Promise.all([enterpriseApi.transmittals(id),enterpriseApi.issuedRevisions(id),enterpriseApi.participants(id)]);setItems(t);setRevisions(r);setParticipants(p)};
+  const latestProjectRef=useRef('');
+  const reload=async(id:string)=>{if(!id)return;latestProjectRef.current=id;const [t,r,p]=await Promise.all([enterpriseApi.transmittals(id),enterpriseApi.issuedRevisions(id),enterpriseApi.participants(id)]);if(latestProjectRef.current!==id)return;setItems(t);setRevisions(r);setParticipants(p)};
   useEffect(()=>{enterpriseApi.projects().then(p=>{setProjects(p);if(p.length){setProjectId(p[0].id);void reload(p[0].id).catch(e=>setError(String(e)))}}).catch(e=>setError(String(e)))},[]);
   const selectProject=(id:string)=>{setProjectId(id);setActiveDraft('');setDetail(null);void reload(id).catch(e=>setError(String(e)))};
   const draft=items.find(x=>x.id===activeDraft);

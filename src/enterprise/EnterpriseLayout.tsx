@@ -28,10 +28,14 @@ const administration: NavItem[] = [
 ];
 
 export default function EnterpriseLayout() {
-  const { items } = useNav();
+  const { items, loading } = useNav();
   const catalogRoutes = new Set(items.filter(i=>i.module==='PROJECT_CONTROL').map(i=>i.route).filter(Boolean));
   // Hiding links is convenience only; every API continues to enforce authorization server-side.
-  const visible = (item:NavItem) => item.route==='/control/projects' || catalogRoutes.size===0 || catalogRoutes.has(item.route);
+  // While the catalog is still loading, don't fail open the way an empty catalog does — that would
+  // flash admin-only links (Security & access, Roles & permissions) to every user until the real
+  // list arrives.
+  const visible = (item:NavItem) =>
+    item.route==='/control/projects' || (!loading && (catalogRoutes.size===0 || catalogRoutes.has(item.route)));
   const links = (values:NavItem[]) => values.filter(visible).map(item => {
     const Icon=item.icon;
     return <NavLink key={item.route} to={item.route} className={({isActive})=>`ec-nav-link ${isActive?'active':''}`}>

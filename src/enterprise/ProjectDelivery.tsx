@@ -19,11 +19,14 @@ export default function ProjectDelivery() {
 
   useEffect(() => {
     if (!projectId) return;
+    let cancelled = false;
     deliveryApi.project(projectId).then(d => {
+      if (cancelled) return;
       setData(d);
       const firstActive = d.stages.find(s => s.status === 'IN_PROGRESS') ?? d.stages[0];
       setStageId(firstActive?.id ?? '');
-    }).catch(e => setError(String(e)));
+    }).catch(e => { if (!cancelled) setError(String(e)); });
+    return () => { cancelled = true; };
   }, [projectId]);
 
   const stage = useMemo<ProjectStage | undefined>(() =>
@@ -81,7 +84,7 @@ export default function ProjectDelivery() {
           <div><small>Blocked</small><strong>{stage.blockedWorkItems}</strong></div>
         </div>
         <div className="ec-package-tabs">{stage.workPackages.map(p=><button key={p.id} className={p.id===selectedPackageId?'active':''} onClick={()=>selectPackage(p.id)}><span>{p.packageCode}</span><strong>{p.name}</strong><small>{p.progressPercent.toFixed(0)}% · {p.workItems.length} items</small></button>)}</div>
-        {pkg && <div className="ec-work-list"><div className="ec-work-list-head"><div><strong>{pkg.name}</strong><span>{pkg.discipline}</span></div><span>{projectCommercial?`${money(pkg.actualCost,data.currency)} visible actual · `:''}{pkg.totalHours.toFixed(1)}h</span></div>{pkg.workItems.map(item=><button key={item.id} className={`ec-work-row ${item.id===selectedWorkItemId?'active':''}`} onClick={()=>setWorkItemId(item.id)}><div className={`ec-work-state ${statusClass(item.status)}`}/><div className="ec-work-main"><span className="ec-project-code">{item.itemCode}</span><strong>{item.name}</strong><small>{item.responsibleOrganizationName??'Unassigned'} · {item.workType.replaceAll('_',' ')}</small></div><div className="ec-work-metrics"><span>{item.progressPercent.toFixed(0)}%</span><span>{item.documentCount} docs</span><span>{item.totalHours.toFixed(1)}h</span></div><span className={`ec-badge ${statusClass(item.status)}`}>{item.status.replaceAll('_',' ')}</span></button>)}</div>}
+        {pkg && <div className="ec-work-list"><div className="ec-work-list-head"><div><strong>{pkg.name}</strong><span>{pkg.discipline}</span></div><span>{projectCommercial?`${money(pkg.actualCost,data.currency)} visible actual · `:''}{pkg.totalHours.toFixed(1)}h</span></div>{pkg.workItems.map(item=><button key={item.id} className={`ec-work-row ${item.id===selectedWorkItemId?'active':''}`} onClick={()=>setWorkItemId(item.id)}><div className={`ec-work-state ${statusClass(item.status)}`}/><div className="ec-work-main"><span className="ec-project-code">{item.itemCode}</span><strong>{item.name}</strong><small>{item.responsibleOrganizationName??'Unassigned'} · {item.workType.replaceAll('_',' ')}</small></div><div className="ec-work-metrics"><span>{item.progressPercent.toFixed(0)}%</span><span>{item.documentCount} docs</span>{item.hoursVisible&&<span>{item.totalHours.toFixed(1)}h</span>}</div><span className={`ec-badge ${statusClass(item.status)}`}>{item.status.replaceAll('_',' ')}</span></button>)}</div>}
       </div>
 
       <aside className="ec-work-detail">{workItem ? <>
@@ -89,9 +92,9 @@ export default function ProjectDelivery() {
           <div className="ec-detail-head"><div><span className="ec-project-code">{workItem.itemCode}</span><h2>{workItem.name}</h2></div><span className={`ec-badge ${statusClass(workItem.status)}`}>{workItem.status.replaceAll('_',' ')}</span></div>
           <div className="ec-progress ec-progress-lg"><span style={{width:`${Math.min(100,workItem.progressPercent)}%`}}/></div>
           {workItem.blockedReason&&<div className="ec-blocker"><AlertCircle size={17}/><div><strong>Why this work is blocked</strong><p>{workItem.blockedReason}</p></div></div>}
-          {workItem.commercialVisible ? <div className="ec-detail-stats"><div><small>Budget</small><strong>{money(workItem.budgetAmount,data.currency)}</strong></div><div><small>Actual</small><strong>{money(workItem.actualCost,data.currency)}</strong></div><div><small>Variance</small><strong className={variance<0?'ec-text-danger':'ec-text-success'}>{money(variance,data.currency)}</strong></div><div><small>Logged time</small><strong>{workItem.totalHours.toFixed(1)} h</strong></div></div>
-            : <div className="ec-commercial-restricted"><ShieldCheck size={14}/><span>Rates, budget and cost are restricted for this work item. Logged operational hours remain visible.</span></div>}
-          {!workItem.commercialVisible&&<div className="ec-detail-stats"><div><small>Logged time</small><strong>{workItem.totalHours.toFixed(1)} h</strong></div><div><small>Documents</small><strong>{workItem.documentCount}</strong></div></div>}
+          {workItem.commercialVisible ? <div className="ec-detail-stats"><div><small>Budget</small><strong>{money(workItem.budgetAmount,data.currency)}</strong></div><div><small>Actual</small><strong>{money(workItem.actualCost,data.currency)}</strong></div><div><small>Variance</small><strong className={variance<0?'ec-text-danger':'ec-text-success'}>{money(variance,data.currency)}</strong></div>{workItem.hoursVisible&&<div><small>Logged time</small><strong>{workItem.totalHours.toFixed(1)} h</strong></div>}</div>
+            : <div className="ec-commercial-restricted"><ShieldCheck size={14}/><span>Rates, budget and cost are restricted for this work item.{workItem.hoursVisible?' Logged operational hours remain visible.':''}</span></div>}
+          {!workItem.commercialVisible&&<div className="ec-detail-stats">{workItem.hoursVisible&&<div><small>Logged time</small><strong>{workItem.totalHours.toFixed(1)} h</strong></div>}<div><small>Documents</small><strong>{workItem.documentCount}</strong></div></div>}
           <div className="ec-detail-line"><CalendarDays size={15}/><span>{date(workItem.plannedStart)} → {date(workItem.plannedEnd)}</span></div><div className="ec-detail-line"><Building2 size={15}/><span>{workItem.responsibleOrganizationName??'No responsible organization'}</span></div>
         </div>
         <div className="ec-card"><div className="ec-card-title"><h2><HardHat size={15}/> Assigned team</h2><span>{workItem.assignments.length}</span></div><div className="ec-assignment-list">{workItem.assignments.map(a=><div key={`${a.userId}-${a.responsibility}`} className="ec-assignment"><div className="ec-avatar">{a.fullName.split(' ').map(v=>v[0]).slice(0,2).join('')}</div><div><strong>{a.fullName}</strong><span>{a.jobTitle??a.accessRole} · {a.organizationName}</span><small>{a.responsibility.replaceAll('_',' ')} · Access: {a.accessRole}</small></div></div>)}</div></div>
