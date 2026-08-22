@@ -11,6 +11,7 @@ export type IssuedRevision = { documentId:string; documentCode?:string; title:st
 export type DocumentPage = {
   documents: DocumentRecord[]; page: number; size: number; hasMore: boolean;
 };
+export type DocumentApprovalSummary = { id:string; documentId:string; status:string; currentStep:number; startedAt:string; completedAt?:string };
 
 export type Organization = { id: string; name: string; orgCode: string; active: boolean };
 
@@ -46,6 +47,10 @@ export const enterpriseApi = {
   paymentApplications:(projectId:string)=>http.get<PaymentApplication[]>(`/payment-applications?projectId=${projectId}`),
   documents:(page=0,size=50,docType?:string)=>
     http.get<DocumentPage>(`/documents?page=${page}&size=${size}${docType?`&docType=${encodeURIComponent(docType)}`:''}`),
+  // Deep-link support: open one document directly (/control/documents/:id) instead of paging
+  // through the register to find it.
+  getDocument:(id:string)=>http.get<DocumentRecord>(`/documents/${id}`),
+  documentApprovals:(id:string)=>http.get<DocumentApprovalSummary[]>(`/documents/${id}/approvals`),
   setDocumentSecurity:(documentId:string,request:{classification:string;discipline?:string;packageCode?:string;locationCode?:string})=>http.patch<void>(`/documents/${documentId}/security`,request),
   grantDocument:(documentId:string,request:{userId?:string;organizationId?:string;roleCode?:string;permission:string;expiresAt?:string})=>http.post<void>(`/documents/${documentId}/grants`,request),
   issueCurrentRevision:(documentId:string,purpose:string)=>http.post<{documentId:string;versionId:string;revisionCode:string;purpose:string}>(`/documents/${documentId}/issue`,{purpose}),

@@ -41,6 +41,9 @@ export default defineConfig({
     }),
   ],
   server: {
+    // Allows the Cloudflare quick-tunnel demo URL (a random *.trycloudflare.com
+    // host that changes every restart) through Vite's Host-header check.
+    allowedHosts: ['.trycloudflare.com'],
     proxy: {
       '/api': {
         target: backendUrl,

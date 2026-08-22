@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Search, RefreshCw, Send } from 'lucide-react';
 import { enterpriseApi, type DocumentPage, type DocumentRecord } from './enterpriseApi';
 
@@ -111,7 +112,7 @@ export default function DocumentRegister() {
           {filtered.map(d => <tr key={d.id}>
             <td>
               <div className="ec-doc-code">{d.documentCode || 'Unnumbered'}</div>
-              <div>{d.title}</div>
+              <div><Link to={`/control/documents/${d.id}`}>{d.title}</Link></div>
               {(d.packageCode || d.locationCode) && <small>{d.packageCode ?? '—'} • {d.locationCode ?? '—'}</small>}
             </td>
             <td>{d.docType}<br /><small>{d.discipline ?? '—'}</small></td>
