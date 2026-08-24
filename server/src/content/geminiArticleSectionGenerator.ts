@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import type {
   ArticleSection,
   SectionGenerator,
-} from './articleContentWorker.js';
+} from './articleContentWorker';
 
 let client: GoogleGenerativeAI | undefined;
 
