@@ -1,0 +1,37 @@
+{
+  "id": "engineering-deep-dive-v1",
+  "description": "Source-grounded engineering article structure. Section order and validation are data-driven.",
+  "sections": [
+    {"id":"hero","type":"hero","required":true},
+    {"id":"engineering_tension","type":"narrative","required":true,"minWords":180},
+    {"id":"real_problem","type":"narrative","required":true,"minWords":160},
+    {"id":"incident","type":"incident","required":true,"minWords":100,"policy":{"sarcasm":"dry","maxSarcasmLines":2,"sourceLabelRequired":true}},
+    {"id":"existing_approaches","type":"analysis","required":true,"minWords":160},
+    {"id":"system_idea","type":"explanation","required":true,"minWords":180},
+    {"id":"usage","type":"usage","required":true,"minWords":120},
+    {"id":"concrete_task","type":"task","required":true},
+    {"id":"snapshot_before","type":"task_snapshot","required":true},
+    {"id":"request_journey","type":"journey","required":true},
+    {"id":"decision_point","type":"decision","required":true},
+    {"id":"implementation","type":"implementation","required":true,"minWords":180,"sourceGrounded":true},
+    {"id":"tradeoffs","type":"tradeoffs","required":true,"minWords":120},
+    {"id":"failure_path","type":"failure_path","required":true,"minWords":100},
+    {"id":"snapshot_after","type":"task_snapshot","required":true},
+    {"id":"verification","type":"evidence","required":true},
+    {"id":"proof_status","type":"proof_status","required":true},
+    {"id":"architecture_reference","type":"architecture_reference","required":false},
+    {"id":"industry_usage","type":"industry_usage","required":true,"minWords":120},
+    {"id":"takeaway","type":"takeaway","required":true},
+    {"id":"next_article","type":"continuation","required":true},
+    {"id":"references","type":"references","required":true}
+  ],
+  "quality": {
+    "minArticleWords": 1800,
+    "maxArticleWords": 4500,
+    "unsupportedClaimsAllowed": 0,
+    "requireIncidentSourceLabel": true,
+    "requireImplementationEvidence": true,
+    "requireVerificationSection": true,
+    "requireTaskBeforeAndAfter": true
+  }
+}

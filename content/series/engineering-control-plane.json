@@ -1,0 +1,32 @@
+{
+  "id": "engineering-control-plane",
+  "title": "Engineering Control Plane",
+  "totalArticles": 70,
+  "articlePattern": "engineering-deep-dive-v1",
+  "tone": {
+    "technicalDepth": "deep",
+    "professional": true,
+    "avoidHype": true,
+    "humor": {
+      "enabled": true,
+      "type": "dry_engineering_sarcasm",
+      "maxOccurrencesPerArticle": 2,
+      "rules": [
+        "Never mock people or teams",
+        "Never invent a production outage",
+        "Label generalized and hypothetical incidents explicitly",
+        "Sarcasm must illuminate the engineering failure, not replace explanation"
+      ]
+    }
+  },
+  "publishing": {
+    "targets": ["github", "linkedin", "substack", "portfolio"],
+    "canonicalFormat": "article-model-json"
+  },
+  "visuals": {
+    "strategy": "component-driven",
+    "canonicalFormat": "visual-model-json",
+    "layoutEngine": "html-css",
+    "allowHardcodedArticleLayout": false
+  }
+}
