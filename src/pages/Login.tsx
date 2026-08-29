@@ -1,9 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../api/authApi';
+import { useNav } from '../contexts/NavContext';
+import { useFeatures } from '../contexts/FeaturesContext';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { refresh: refreshNav } = useNav();
+  const { refresh: refreshFeatures } = useFeatures();
   const [email, setEmail]       = useState('admin@speedwheels.com');
   const [password, setPassword] = useState('admin123');
   const [error, setError]       = useState('');
@@ -15,6 +19,11 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email, password);
+      // NavProvider/FeaturesProvider fetch once on mount, which happens on this very page while
+      // still logged out — router navigation below doesn't remount them, so without this they'd
+      // stay empty (just the hardcoded Projects link) until the next full page load.
+      refreshNav();
+      refreshFeatures();
       navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');

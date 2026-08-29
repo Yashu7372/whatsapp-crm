@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Bell, Bot, BriefcaseBusiness, Building2, ClipboardCheck, Clock3, FileText, FolderKanban, Gauge, MessageCircle, Settings2, ShieldCheck, UsersRound, WalletCards, Workflow } from 'lucide-react';
 import { useNav } from '../contexts/NavContext';
+import { isPlatformAdmin } from '../api/httpClient';
 import { enterpriseApi } from './enterpriseApi';
 import './enterprise.css';
 
@@ -30,7 +31,8 @@ const administration: NavItem[] = [
 ];
 
 export default function EnterpriseLayout() {
-  const { items } = useNav();
+  const { items, loading } = useNav();
+  const platformAdmin = isPlatformAdmin();
   const [unreadNotifications,setUnreadNotifications]=useState(0);
 
   // In-app notifications are durable server records. Refresh the tiny unread-count endpoint rather
@@ -49,7 +51,16 @@ export default function EnterpriseLayout() {
 
   const catalogRoutes = new Set(items.filter(i=>i.module==='PROJECT_CONTROL').map(i=>i.route).filter(Boolean));
   // Hiding links is convenience only; every API continues to enforce authorization server-side.
-  const visible = (item:NavItem) => item.route==='/control/projects' || catalogRoutes.size===0 || catalogRoutes.has(item.route);
+  // Roles & permissions manages the platform-wide role matrix (RolePermissionAdminController), not
+  // a tenant feature — it has no feature_catalog/PROJECT_CONTROL row and never will, so it's gated
+  // directly off the platform-admin JWT claim instead of catalogRoutes.
+  // The `loading` branch is only a first-paint grace period so the sidebar doesn't flash empty
+  // before /me/nav resolves; once loaded, a genuinely empty catalog hides these links rather than
+  // showing every admin surface to whoever happens to be logged in.
+  const visible = (item:NavItem) => {
+    if (item.route === '/control/roles') return platformAdmin;
+    return item.route==='/control/projects' || loading || catalogRoutes.has(item.route);
+  };
   const links = (values:NavItem[]) => values.filter(visible).map(item => {
     const Icon=item.icon;
     const showUnread=item.route==='/control/communications'&&unreadNotifications>0;
