@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Copy, LockKeyhole, Plus, Save, Trash2 } from 'lucide-react';
 import type { WorkflowConfigurationOptions } from './api';
+import './workflow-builder.css';
 
 export interface WorkflowBuilderStepInput {
   stepCode: string;
