@@ -1,0 +1,31 @@
+name: Project Control UI
+
+on:
+  push:
+    branches:
+      - feature/project-control-modulith-ui
+    paths:
+      - 'project-control-ui/**'
+      - '.github/workflows/project-control-ui.yml'
+  pull_request:
+    paths:
+      - 'project-control-ui/**'
+      - '.github/workflows/project-control-ui.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: project-control-ui
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: project-control-ui/package.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build
+        run: npm run build
