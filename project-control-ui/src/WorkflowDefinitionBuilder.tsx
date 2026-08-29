@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
-import { Copy, LockKeyhole, Plus, Save, Trash2 } from 'lucide-react';
-import type { WorkflowConfigurationOptions } from './api';
+import { useEffect, useMemo, useState } from 'react';
+import { Copy, Layers3, LockKeyhole, Plus, Save, Trash2 } from 'lucide-react';
+import { api, type Id, type Scope, type WorkflowConfigurationOptions } from './api';
 import './workflow-builder.css';
 
 export interface WorkflowBuilderStepInput {
@@ -12,6 +12,7 @@ export interface WorkflowBuilderStepInput {
 }
 
 export interface WorkflowBuilderInput {
+  scopeId: Id;
   code: string;
   name: string;
   purposeCode: string;
@@ -22,6 +23,7 @@ export interface WorkflowBuilderInput {
 interface Props {
   disabled: boolean;
   busy: boolean;
+  projectName?: string;
   options: WorkflowConfigurationOptions | null;
   onCreate: (input: WorkflowBuilderInput) => Promise<void>;
 }
@@ -41,7 +43,30 @@ function blankStep(sequence: number, action = 'REVIEW'): DraftStep {
   };
 }
 
-export default function WorkflowDefinitionBuilder({ disabled, busy, options, onCreate }: Props) {
+function scopePath(scope: Scope, scopes: Scope[]) {
+  const path: string[] = [];
+  const visited = new Set<string>();
+  let current: Scope | undefined = scope;
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    path.unshift(current.name);
+    current = current.parentScopeId
+      ? scopes.find(candidate => candidate.id === current?.parentScopeId)
+      : undefined;
+  }
+  return path.join(' / ');
+}
+
+export default function WorkflowDefinitionBuilder({ disabled, busy, projectName, options, onCreate }: Props) {
+  const projectId = options?.projectId ?? null;
+  const initialScopeId = options?.scopeId ?? null;
+
+  const [scopes, setScopes] = useState<Scope[]>([]);
+  const [selectedScopeId, setSelectedScopeId] = useState<Id | null>(initialScopeId);
+  const [contextOptions, setContextOptions] = useState<WorkflowConfigurationOptions | null>(options);
+  const [contextLoading, setContextLoading] = useState(false);
+  const [contextError, setContextError] = useState<string | null>(null);
+
   const [code, setCode] = useState('DOC_REVIEW');
   const [name, setName] = useState('Document Review');
   const [purposeCode, setPurposeCode] = useState('DOCUMENT_REVIEW');
@@ -52,20 +77,70 @@ export default function WorkflowDefinitionBuilder({ disabled, busy, options, onC
     { ...blankStep(2, 'REVIEW'), stepCode: 'REVIEW', name: 'Review document' },
   ]);
 
+  useEffect(() => {
+    if (disabled || !projectId) return;
+    let cancelled = false;
+    setContextLoading(true);
+    setContextError(null);
+    api.listScopes(projectId)
+      .then(items => {
+        if (cancelled) return;
+        setScopes(items);
+        setSelectedScopeId(current => {
+          if (current && items.some(scope => scope.id === current)) return current;
+          if (initialScopeId && items.some(scope => scope.id === initialScopeId)) return initialScopeId;
+          return null;
+        });
+      })
+      .catch(error => {
+        if (!cancelled) setContextError(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => { if (!cancelled) setContextLoading(false); });
+    return () => { cancelled = true; };
+  }, [disabled, projectId, initialScopeId]);
+
+  useEffect(() => {
+    if (disabled || !projectId || !selectedScopeId) return;
+    let cancelled = false;
+    setContextLoading(true);
+    setContextError(null);
+    api.getWorkflowOptions(projectId, selectedScopeId)
+      .then(next => {
+        if (!cancelled) setContextOptions(next);
+      })
+      .catch(error => {
+        if (!cancelled) {
+          setContextOptions(null);
+          setContextError(error instanceof Error ? error.message : String(error));
+        }
+      })
+      .finally(() => { if (!cancelled) setContextLoading(false); });
+    return () => { cancelled = true; };
+  }, [disabled, projectId, selectedScopeId]);
+
   const responsibilities = useMemo(() => {
     const seen = new Set<string>();
-    return (options?.assignments ?? []).filter(item => {
+    return (contextOptions?.assignments ?? []).filter(item => {
       if (seen.has(item.responsibilityCode)) return false;
       seen.add(item.responsibilityCode);
       return true;
     });
-  }, [options]);
+  }, [contextOptions]);
 
   const responsibilityCodes = responsibilities.map(item => item.responsibilityCode);
-  const actions = options?.completionActions?.length
-    ? options.completionActions
+  const actions = contextOptions?.completionActions?.length
+    ? contextOptions.completionActions
     : ['SUBMIT', 'VERIFY', 'RECEIVE', 'REVIEW', 'APPROVE', 'ACCEPT', 'COMPLETE'];
-  const capabilities = options?.enabledCapabilities ?? [];
+  const capabilities = contextOptions?.enabledCapabilities ?? [];
+  const selectedScope = scopes.find(scope => scope.id === selectedScopeId) ?? null;
+
+  useEffect(() => {
+    if (!capabilities.length) {
+      setCapabilityCode('');
+      return;
+    }
+    setCapabilityCode(current => capabilities.includes(current) ? current : capabilities[0]);
+  }, [capabilities]);
 
   function responsibilityLabel(codeValue: string) {
     const item = responsibilities.find(value => value.responsibilityCode === codeValue);
@@ -140,7 +215,9 @@ export default function WorkflowDefinitionBuilder({ disabled, busy, options, onC
   }
 
   async function create() {
+    if (!selectedScopeId) return;
     await onCreate({
+      scopeId: selectedScopeId,
       code: code.trim().toUpperCase(),
       name: name.trim(),
       purposeCode: purposeCode.trim().toUpperCase(),
@@ -159,12 +236,42 @@ export default function WorkflowDefinitionBuilder({ disabled, busy, options, onC
       <LockKeyhole size={22}/>
       <div>
         <strong>Workflow design is locked for this account</strong>
-        <p>This user may participate in workflows according to scope responsibility, but cannot change the process definition. Workflow configuration currently requires Project Admin.</p>
+        <p>This user may participate in workflows according to scope responsibility, but cannot change process definitions or scope bindings. Workflow configuration currently requires Project Admin.</p>
       </div>
     </div>;
   }
 
   return <div className="workflow-builder" data-testid="workflow-builder">
+    <section className="workflow-context" data-testid="workflow-context">
+      <div className="workflow-context-heading">
+        <Layers3 size={19}/>
+        <div><strong>1. Context & applicability</strong><small>The selected scope is an actual node configured in this project. Binding applies only to this exact scope; child scopes do not inherit it automatically.</small></div>
+      </div>
+      <div className="workflow-context-grid">
+        <label>Project
+          <input value={projectName ?? projectId ?? ''} readOnly aria-label="Workflow project"/>
+        </label>
+        <label>Apply workflow to Project Scope
+          <select data-testid="workflow-scope-select" aria-label="Apply workflow to Project Scope" value={selectedScopeId ?? ''} onChange={event => setSelectedScopeId(event.target.value || null)} disabled={busy || contextLoading}>
+            <option value="" disabled>Select an actual project scope…</option>
+            {scopes.map(scope => <option key={scope.id} value={scope.id}>{scopePath(scope, scopes)} · {scope.scopeType}</option>)}
+          </select>
+        </label>
+      </div>
+      {selectedScope && <div className="selected-scope-summary" data-testid="selected-workflow-scope">
+        <strong>{scopePath(selectedScope, scopes)}</strong>
+        <span>{selectedScope.scopeType} · {selectedScope.code}</span>
+      </div>}
+      <div className="scope-capabilities" data-testid="workflow-scope-capabilities">
+        <span>Enabled capabilities on this exact scope:</span>
+        {capabilities.length ? capabilities.map(value => <b key={value}>{value}</b>) : <em>None configured</em>}
+      </div>
+      {contextLoading && <small>Loading scope configuration…</small>}
+      {contextError && <small className="workflow-context-error">{contextError}</small>}
+      {selectedScopeId && !capabilities.length && !contextLoading && <small className="workflow-context-warning">This scope cannot receive a workflow until a required capability is enabled on it.</small>}
+    </section>
+
+    <div className="workflow-section-label"><strong>2. Process</strong><small>Start blank or use a reusable starter to populate the generic definition.</small></div>
     <div className="workflow-template-row">
       <label>Reusable starter template
         <select value={template} onChange={event => setTemplate(event.target.value)}>
@@ -173,7 +280,7 @@ export default function WorkflowDefinitionBuilder({ disabled, busy, options, onC
           <option value="ITR_WORK_VERIFICATION">ITR / work verification</option>
         </select>
       </label>
-      <button type="button" onClick={applyTemplate} disabled={busy}><Copy size={15}/> Apply template</button>
+      <button type="button" onClick={applyTemplate} disabled={busy || contextLoading || !selectedScopeId}><Copy size={15}/> Apply template</button>
     </div>
 
     <div className="workflow-definition-grid">
@@ -181,12 +288,14 @@ export default function WorkflowDefinitionBuilder({ disabled, busy, options, onC
       <label>Workflow name<input value={name} onChange={event => setName(event.target.value)}/></label>
       <label>Purpose code<input value={purposeCode} onChange={event => setPurposeCode(event.target.value.toUpperCase())}/></label>
       <label>Required scope capability
-        <select value={capabilityCode} onChange={event => setCapabilityCode(event.target.value)}>
+        <select data-testid="workflow-required-capability" value={capabilityCode} onChange={event => setCapabilityCode(event.target.value)} disabled={!capabilities.length}>
+          {!capabilities.length && <option value="">No enabled capability</option>}
           {capabilities.map(value => <option key={value} value={value}>{value}</option>)}
         </select>
       </label>
     </div>
 
+    <div className="workflow-section-label"><strong>3. Steps</strong><small>Actions and visibility use responsibilities actually assigned within the selected scope.</small></div>
     <div className="workflow-step-builder">
       {steps.map((step, index) => <div className="workflow-draft-step" key={step.key} data-testid={`workflow-draft-step-${index + 1}`}>
         <div className="workflow-draft-step-number">{index + 1}</div>
@@ -223,12 +332,12 @@ export default function WorkflowDefinitionBuilder({ disabled, busy, options, onC
           />
         </div>
       </div>)}
-      <button type="button" className="add-workflow-step" onClick={addStep} disabled={busy}><Plus size={16}/> Add next step</button>
+      <button type="button" className="add-workflow-step" onClick={addStep} disabled={busy || !selectedScopeId}><Plus size={16}/> Add next step</button>
     </div>
 
     <div className="workflow-builder-footer">
-      <small>Definitions are reusable project configuration. Creating here activates the definition and binds it to the current scope; no ITR-specific backend entity is created.</small>
-      <button className="primary" type="button" disabled={busy || !code.trim() || !name.trim() || !capabilityCode || steps.some(step => !step.stepCode.trim() || !step.name.trim() || !step.action)} onClick={create}><Save size={15}/> Create, activate & bind</button>
+      <small>{selectedScope ? `This creates a reusable project definition and an explicit binding to ${scopePath(selectedScope, scopes)} only.` : 'Select a project scope before creating the workflow.'}</small>
+      <button className="primary" type="button" disabled={busy || contextLoading || !selectedScopeId || !code.trim() || !name.trim() || !capabilityCode || steps.some(step => !step.stepCode.trim() || !step.name.trim() || !step.action)} onClick={create}><Save size={15}/> Create, activate & bind</button>
     </div>
   </div>;
 }
@@ -244,7 +353,7 @@ function AssignmentSelector({ title, hint, selected, responsibilities, label, on
   return <div className="assignment-selector">
     <div><strong>{title}</strong><small>{hint}</small></div>
     <div className="assignment-options">
-      {responsibilities.length === 0 && <span className="assignment-empty">No active scope responsibilities found.</span>}
+      {responsibilities.length === 0 && <span className="assignment-empty">No active responsibilities are assigned to this exact project scope.</span>}
       {responsibilities.map(value => <button type="button" key={value} className={selected.includes(value) ? 'assignment-chip selected' : 'assignment-chip'} onClick={() => onToggle(value)} aria-pressed={selected.includes(value)}>{label(value)}</button>)}
     </div>
   </div>;
