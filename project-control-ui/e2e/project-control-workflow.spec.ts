@@ -29,7 +29,7 @@ test('real Project Control shell exposes separate project screens and admin-only
   await expect(page.getByTestId('nav-admin')).toBeVisible();
 
   await navigate(page, 'nav-documents', 'screen-documents');
-  await expect(page.getByText('CHW Routing Shop Drawing')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'CHW Routing Shop Drawing' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Document Register' })).toBeVisible();
 
   await navigate(page, 'nav-workflows', 'screen-workflows');
