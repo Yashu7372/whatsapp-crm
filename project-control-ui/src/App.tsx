@@ -10,8 +10,8 @@ import {
 } from './api';
 import './styles.css';
 
-const STORAGE_KEY = 'project-control-foundation-demo';
-const USER_KEY = 'project-control-active-user';
+const STORAGE_KEY = 'project-control-foundation-demo-v2';
+const USER_KEY = 'project-control-active-user-v2';
 
 function App() {
   const [demo, setDemo] = useState<DemoState | null>(() => {
@@ -176,12 +176,12 @@ function App() {
 
   async function createWorkflow() {
     if (!demo) return;
-    const steps = workflowStepsText.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
-      const [stepCode, name, action] = line.split('|').map(value => value?.trim());
-      if (!stepCode || !name || !action) throw new Error('Each workflow step must be STEP_CODE|Name|ACTION');
-      return { stepCode, name, action };
-    });
     await run('Creating and binding workflow...', async () => {
+      const steps = workflowStepsText.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+        const [stepCode, name, action] = line.split('|').map(value => value?.trim());
+        if (!stepCode || !name || !action) throw new Error('Each workflow step must be STEP_CODE|Name|ACTION');
+        return { stepCode, name, action };
+      });
       const created = await api.createWorkflowFlow(demo.project.id, demo.mepScope.id, {
         code: workflowCode,
         name: workflowName,
