@@ -68,5 +68,5 @@ test('real Project Control shell exposes separate project screens and admin-only
   await expect(page.getByTestId('nav-admin')).toHaveCount(0);
 
   await navigate(page, 'nav-workflows', 'screen-workflows');
-  await expect(page.getByText('Site Team Raise')).toBeVisible();
+  await expect(page.getByText('Site Team Raise').first()).toBeVisible();
 });
