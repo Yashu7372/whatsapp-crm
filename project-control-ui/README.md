@@ -22,7 +22,7 @@ From `whatsapp-bot/project-control-service` on branch `feature/project-control-m
 mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-The `local` profile uses a persistent H2 database under `project-control-service/.data/` and runs the same Flyway V1-V3 migrations. PostgreSQL remains the production/CI database.
+The `local` profile uses a persistent H2 file directly under `project-control-service/` (`project-control-local.mv.db`) and runs the same Flyway V1-V3 migrations. PostgreSQL remains the production/CI database.
 
 Backend runs on:
 
@@ -65,4 +65,4 @@ Workspace
 
 Then use the UI to add document revisions, complete workflow steps, add comments, return to earlier steps, reject, refresh and inspect the persisted workflow history.
 
-If you delete/reset the backend `.data` directory, click **Create fresh demo** again because browser local storage may still contain IDs from the old local database.
+To reset the local backend completely, stop it and delete `project-control-local.mv.db` (and any adjacent H2 lock/trace file if present). Then start it again and click **Create fresh demo** because browser local storage may still contain IDs from the old local database.
