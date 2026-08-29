@@ -1,0 +1,17 @@
+# Development-only image — runs the Vite dev server with HMR.
+# Source is bind-mounted at /app via docker-compose.dev.yml.
+# Do NOT use for production (use the nginx Dockerfile instead).
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies into the image layer.
+# The named volume crm_node_modules:/app/node_modules in docker-compose.dev.yml
+# inherits these on first container start, keeping them isolated from the host.
+COPY package*.json ./
+RUN npm install
+
+EXPOSE 5173
+
+# --host 0.0.0.0 binds to all interfaces inside the container (required for Docker).
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

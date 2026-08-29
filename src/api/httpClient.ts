@@ -81,9 +81,31 @@ export function isAuthenticated(): boolean {
   return !!getToken();
 }
 
+/**
+ * Platform admins (JwtService.buildPlatformToken, claim scope=PLATFORM) aren't tenant-scoped, so
+ * /me/nav returns no items for them and they never show up in any tenant's role_permissions matrix.
+ * Decoding the claim client-side is the only way the UI can tell "this session is platform-scoped"
+ * apart from "this tenant's nav is genuinely empty" — see EnterpriseLayout's admin nav gating.
+ */
+export function isPlatformAdmin(): boolean {
+  const token = getToken();
+  if (!token) return false;
+  try {
+    const payload = token.split('.')[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(payload.length + (4 - (payload.length % 4)) % 4, '=');
+    const claims = JSON.parse(atob(base64)) as { scope?: string };
+    return claims.scope === 'PLATFORM';
+  } catch {
+    return false;
+  }
+}
+
 export function logout(): void {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('tenantId');
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith('nav_cache_v1:')) localStorage.removeItem(key);
+  }
   window.location.href = '/login';
 }

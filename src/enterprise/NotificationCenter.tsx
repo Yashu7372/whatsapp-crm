@@ -1,0 +1,33 @@
+import { useEffect, useMemo, useState } from 'react';
+import { enterpriseApi, type DocumentNotification, type NotificationDeliveryAudit, type NotificationPreferences } from './enterpriseApi';
+
+// Mirrors the server-side E.164 check so the control is disabled before a rejected save.
+const E164=/^\+[1-9]\d{7,14}$/;
+
+const tone=(event:string)=>event.includes('OVERDUE')?'red':event.includes('DUE_SOON')?'amber':event.includes('RESULT')||event.includes('ACKNOWLEDGED')?'green':'teal';
+
+export default function NotificationCenter(){
+  const [notifications,setNotifications]=useState<DocumentNotification[]>([]),[prefs,setPrefs]=useState<NotificationPreferences>({emailEnabled:true,whatsappEnabled:false,whatsappNumber:''}),[audit,setAudit]=useState<NotificationDeliveryAudit[]>([]);
+  const [error,setError]=useState(''),[message,setMessage]=useState(''),[saving,setSaving]=useState(false),[auditAvailable,setAuditAvailable]=useState(true);
+  useEffect(()=>{
+    Promise.all([enterpriseApi.notifications(),enterpriseApi.notificationPreferences()])
+      .then(([n,p])=>{setNotifications(n);setPrefs({...p,whatsappNumber:p.whatsappNumber||''})})
+      .catch(e=>setError(String(e)));
+    enterpriseApi.notificationDeliveryAudit()
+      .then(a=>{setAudit(a);setAuditAvailable(true)})
+      .catch(()=>{setAudit([]);setAuditAvailable(false)});
+  },[]);
+  const unread=useMemo(()=>notifications.filter(n=>!n.readAt).length,[notifications]);
+  const counts=useMemo(()=>({overdue:notifications.filter(n=>n.eventType==='APPROVAL_OVERDUE'&&!n.readAt).length,actions:notifications.filter(n=>n.eventType==='APPROVAL_ASSIGNED'&&!n.readAt).length}),[notifications]);
+  const mark=async(id:string)=>{setError('');try{await enterpriseApi.markNotificationRead(id);setNotifications(v=>v.map(n=>n.id===id?{...n,readAt:new Date().toISOString()}:n))}catch(e){setError(String(e))}};
+  const markAll=async()=>{setError('');try{await enterpriseApi.markAllNotificationsRead();const now=new Date().toISOString();setNotifications(v=>v.map(n=>({...n,readAt:n.readAt||now})))}catch(e){setError(String(e))}};
+  const save=async()=>{setSaving(true);setError('');setMessage('');try{await enterpriseApi.updateNotificationPreferences(prefs);setMessage('Notification preferences saved.')}catch(e){setError(String(e))}finally{setSaving(false)}};
+  return <div className="ec-page">
+    <header className="ec-topbar"><div className="ec-title"><h1>Notifications</h1><p>In-app document alerts with optional email and WhatsApp delivery.</p></div><button className="ec-button" disabled={!unread} onClick={()=>void markAll()}>Mark all read</button></header>
+    {error&&<div className="ec-error">{error}</div>}{message&&<div className="ec-card" style={{marginBottom:12}}>{message}</div>}
+    <section className="ec-grid ec-three"><div className="ec-card"><div className="ec-kpi-label">Unread</div><div className="ec-kpi-value">{unread}</div></div><div className="ec-card"><div className="ec-kpi-label">Assigned actions</div><div className="ec-kpi-value">{counts.actions}</div></div><div className="ec-card"><div className="ec-kpi-label">Overdue</div><div className="ec-kpi-value">{counts.overdue}</div></div></section>
+    <section className="ec-card ec-section"><div className="ec-card-title"><h2>Delivery preferences</h2><span>Per user</span></div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr 2fr auto',gap:12,alignItems:'center'}}><label><input type="checkbox" checked={prefs.emailEnabled} onChange={e=>setPrefs(v=>({...v,emailEnabled:e.target.checked}))}/> Email</label><label><input type="checkbox" checked={prefs.whatsappEnabled} onChange={e=>setPrefs(v=>({...v,whatsappEnabled:e.target.checked}))}/> WhatsApp</label><input className="ec-input" value={prefs.whatsappNumber||''} disabled={!prefs.whatsappEnabled} onChange={e=>setPrefs(v=>({...v,whatsappNumber:e.target.value}))} placeholder="+971501234567"/><button className="ec-button" disabled={saving||Boolean(prefs.whatsappEnabled&&!E164.test((prefs.whatsappNumber||'').replace(/[\s()-]/g,'')))} onClick={()=>void save()}>{saving?'Saving…':'Save'}</button></div><div className="ec-kpi-meta" style={{marginTop:10}}>In-app notifications are always retained. External channels follow your preferences and server transport configuration. The WhatsApp number must be in international format (for example +971501234567); the server rejects anything else so messages cannot be sent to an unintended destination.</div></section>
+    <section className="ec-section"><div className="ec-card-title"><h2>Notification inbox</h2><span>{notifications.length} recent</span></div><div className="ec-table-wrap"><table className="ec-table"><thead><tr><th>Event</th><th>Message</th><th>Time</th><th>Status</th><th/></tr></thead><tbody>{notifications.map(n=><tr key={n.id} style={{opacity:n.readAt?.length?0.72:1}}><td><span className={`ec-badge ${tone(n.eventType)}`}>{n.eventType.replaceAll('_',' ')}</span></td><td><div className="ec-doc-code">{n.title}</div><div>{n.body}</div></td><td>{new Date(n.createdAt).toLocaleString()}</td><td>{n.readAt?'READ':'UNREAD'}</td><td>{!n.readAt?<button className="ec-button" onClick={()=>void mark(n.id)}>Read</button>:'—'}</td></tr>)}{!notifications.length&&<tr><td colSpan={5}><div className="ec-empty">No document-control notifications yet.</div></td></tr>}</tbody></table></div></section>
+    <section className="ec-section"><div className="ec-card-title"><h2>External delivery audit</h2><span>{auditAvailable?'Tenant admin view':'Tenant admin only'}</span></div>{auditAvailable?<div className="ec-table-wrap"><table className="ec-table"><thead><tr><th>Event</th><th>User</th><th>Channel</th><th>Destination</th><th>Status</th><th>Attempts</th><th>Last result</th></tr></thead><tbody>{audit.map(a=><tr key={a.id}><td>{a.eventType}</td><td>{a.userEmail}</td><td>{a.channel}</td><td>{a.destination}</td><td><span className={`ec-badge ${a.status==='SENT'?'green':a.status==='DEAD'?'red':a.status==='FAILED'?'amber':'teal'}`}>{a.status}</span></td><td>{a.attempts}</td><td>{a.sentAt?new Date(a.sentAt).toLocaleString():a.lastError||'Pending'}</td></tr>)}{!audit.length&&<tr><td colSpan={7}><div className="ec-empty">No external delivery attempts yet.</div></td></tr>}</tbody></table></div>:<div className="ec-card"><div className="ec-kpi-meta">Cross-user email/WhatsApp delivery audit is restricted to true tenant administrators.</div></div>}</section>
+  </div>;
+}

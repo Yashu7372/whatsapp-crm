@@ -1,26 +1,30 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import * as LucideIcons from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import {
-  LayoutDashboard, MessageSquare, Users, Calendar,
-  Megaphone, BarChart3, Bot, UserPlus,
-  CreditCard, Zap, LogOut, User, ChevronUp,
-  Globe, X, Wifi, WifiOff, FileText, Image,
-  TrendingUp, Video, Clock, HardDrive, Share2,
+  Zap, LogOut, User, ChevronUp, X, Wifi, WifiOff,
 } from 'lucide-react';
 import { crmApi, type Workspace } from '../../api/crmApi';
 import { logout } from '../../api/httpClient';
-import { useFeatures } from '../../contexts/FeaturesContext';
+import { useNav } from '../../contexts/NavContext';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+const iconRegistry = LucideIcons as unknown as Record<string, LucideIcon>;
+
+function resolveIcon(name: string | null): LucideIcon {
+  return (name && iconRegistry[name]) || LucideIcons.Circle;
+}
+
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const navigate = useNavigate();
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const { isEnabled } = useFeatures();
+  const { items } = useNav();
 
   useEffect(() => {
     crmApi.getWorkspace().then(setWorkspace).catch(() => {});
@@ -33,6 +37,21 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const initial = workspace?.name?.[0]?.toUpperCase() ?? '?';
   const isConnected = workspace?.whatsappConnected;
+
+  // The nav API already scopes items to what this tenant is entitled to and
+  // this user's role may see — the sidebar just groups and renders them.
+  // Items with no navSection (e.g. Project Control sub-pages) belong to
+  // EnterpriseLayout's own nav, not the main sidebar.
+  const sections = new Map<string, typeof items>();
+  for (const item of items) {
+    if (!item.navSection) continue;
+    if (!sections.has(item.navSection)) sections.set(item.navSection, []);
+    sections.get(item.navSection)!.push(item);
+  }
+  const sectionDisplayOrder = ['Main', 'Enterprise', 'Marketing', 'Content', 'Settings'];
+  const orderedSections = [...sections.entries()].sort(
+    ([a], [b]) => sectionDisplayOrder.indexOf(a) - sectionDisplayOrder.indexOf(b)
+  );
 
   return (
     <aside className={`sidebar${isOpen ? ' open' : ''}`}>
@@ -55,101 +74,25 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </button>
       </div>
 
-      {/* ── Navigation ────────────────────────────────────── */}
+      {/* ── Navigation (driven entirely by GET /api/v1/me/nav) ──────── */}
       <nav className="sidebar-nav">
-
-        <div className="nav-section">
-          <p className="nav-section-title">Main</p>
-          <NavLink to="/dashboard" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-            <LayoutDashboard size={18} className="nav-icon" /><span>Dashboard</span>
-          </NavLink>
-          <NavLink to="/inbox" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-            <MessageSquare size={18} className="nav-icon" /><span>Inbox</span>
-          </NavLink>
-          <NavLink to="/contacts" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-            <Users size={18} className="nav-icon" /><span>Contacts</span>
-          </NavLink>
-          <NavLink to="/bookings" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-            <Calendar size={18} className="nav-icon" /><span>Bookings</span>
-          </NavLink>
-        </div>
-
-        <div className="nav-section">
-          <p className="nav-section-title">Marketing</p>
-          {isEnabled('CAMPAIGNS') && (
-            <NavLink to="/campaigns" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <Megaphone size={18} className="nav-icon" /><span>Campaigns</span>
-            </NavLink>
-          )}
-          <NavLink to="/analytics" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-            <BarChart3 size={18} className="nav-icon" /><span>Analytics</span>
-          </NavLink>
-        </div>
-
-        {(isEnabled('DOCUMENT_CONTROL') || isEnabled('MEDIA_LIBRARY') ||
-          isEnabled('AI_TREND_PICKER') || isEnabled('AI_CONTENT_GENERATOR') ||
-          isEnabled('VIDEO_TEMPLATE_ENGINE') || isEnabled('SCHEDULED_PUBLISHING')) && (
-          <div className="nav-section">
-            <p className="nav-section-title">Content</p>
-            {isEnabled('DOCUMENT_CONTROL') && (
-              <NavLink to="/documents" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-                <FileText size={18} className="nav-icon" /><span>Documents</span>
-              </NavLink>
-            )}
-            {isEnabled('MEDIA_LIBRARY') && (
-              <NavLink to="/media-library" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-                <Image size={18} className="nav-icon" /><span>Media Library</span>
-              </NavLink>
-            )}
-            {isEnabled('AI_TREND_PICKER') && (
-              <NavLink to="/trends" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-                <TrendingUp size={18} className="nav-icon" /><span>AI Trends</span>
-              </NavLink>
-            )}
-            {isEnabled('AI_CONTENT_GENERATOR') && (
-              <NavLink to="/content-studio" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-                <Zap size={18} className="nav-icon" /><span>Content Studio</span>
-              </NavLink>
-            )}
-            {isEnabled('VIDEO_TEMPLATE_ENGINE') && (
-              <NavLink to="/video-generator" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-                <Video size={18} className="nav-icon" /><span>Video Generator</span>
-              </NavLink>
-            )}
-            {isEnabled('SCHEDULED_PUBLISHING') && (
-              <NavLink to="/calendar" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-                <Clock size={18} className="nav-icon" /><span>Content Calendar</span>
-              </NavLink>
-            )}
+        {orderedSections.map(([section, sectionItems]) => (
+          <div className="nav-section" key={section}>
+            <p className="nav-section-title">{section}</p>
+            {sectionItems.map((item) => {
+              const Icon = resolveIcon(item.navIcon);
+              return (
+                <NavLink
+                  key={item.featureCode}
+                  to={item.route ?? '#'}
+                  className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+                >
+                  <Icon size={18} className="nav-icon" /><span>{item.navLabel}</span>
+                </NavLink>
+              );
+            })}
           </div>
-        )}
-
-        <div className="nav-section">
-          <p className="nav-section-title">Settings</p>
-          <NavLink to="/settings/webhook" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-            <Globe size={18} className="nav-icon" /><span>Webhook Setup</span>
-          </NavLink>
-          <NavLink to="/settings/bot" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-            <Bot size={18} className="nav-icon" /><span>AI Bot Config</span>
-          </NavLink>
-          <NavLink to="/settings/team" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-            <UserPlus size={18} className="nav-icon" /><span>Team</span>
-          </NavLink>
-          {isEnabled('SCHEDULED_PUBLISHING') && (
-            <NavLink to="/settings/social" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <Share2 size={18} className="nav-icon" /><span>Social Accounts</span>
-            </NavLink>
-          )}
-          {(isEnabled('MEDIA_LIBRARY') || isEnabled('DOCUMENT_CONTROL')) && (
-            <NavLink to="/settings/storage" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <HardDrive size={18} className="nav-icon" /><span>Storage</span>
-            </NavLink>
-          )}
-          <NavLink to="/settings/billing" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-            <CreditCard size={18} className="nav-icon" /><span>Billing</span>
-          </NavLink>
-        </div>
-
+        ))}
       </nav>
 
       {/* ── WhatsApp connection status ────────────────────── */}

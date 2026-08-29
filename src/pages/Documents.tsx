@@ -56,7 +56,7 @@ export default function Documents() {
     try {
       setLoading(true);
       const data = await documentApi.list(filterType || undefined);
-      setDocs(data);
+      setDocs(data.documents);
     } catch (e) {
       setError('Failed to load documents');
     } finally {

@@ -1,0 +1,77 @@
+name: Deploy Staging UI to Cloudflare Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: Optional backend API base URL for this deployment
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: enterprise-control-ui-staging
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build and deploy UI
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      STAGING_API_BASE_URL: ${{ inputs.api_base_url || vars.STAGING_API_BASE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate staging configuration
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_PAGES_PROJECT STAGING_API_BASE_URL; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required staging configuration: $name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build enterprise UI
+        env:
+          VITE_API_BASE_URL: ${{ env.STAGING_API_BASE_URL }}
+        run: npm run build
+
+      - name: Lint enterprise routes
+        run: npx eslint src/App.tsx src/enterprise
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT }} --branch=staging
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deployment summary
+        shell: bash
+        run: |
+          echo "### Staging UI deployed" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Pages project: \`${{ vars.CLOUDFLARE_PAGES_PROJECT }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Backend API: \`${STAGING_API_BASE_URL}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Branch alias: \`staging.${{ vars.CLOUDFLARE_PAGES_PROJECT }}.pages.dev\`" >> "$GITHUB_STEP_SUMMARY"

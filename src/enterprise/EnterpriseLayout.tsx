@@ -1,0 +1,92 @@
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet } from 'react-router-dom';
+import { Bell, Bot, BriefcaseBusiness, Building2, ClipboardCheck, Clock3, FileText, FolderKanban, Gauge, MessageCircle, Settings2, ShieldCheck, UsersRound, WalletCards, Workflow } from 'lucide-react';
+import { useNav } from '../contexts/NavContext';
+import { isPlatformAdmin } from '../api/httpClient';
+import { enterpriseApi } from './enterpriseApi';
+import './enterprise.css';
+
+type NavItem = { label:string; route:string; icon:React.ComponentType<{size?:number}> };
+
+const primary: NavItem[] = [
+  { label:'Projects', route:'/control/projects', icon:FolderKanban },
+  { label:'Documents', route:'/control/documents', icon:FileText },
+  { label:'My approvals', route:'/control/approvals', icon:ClipboardCheck },
+  { label:'Project controls', route:'/control/project-controls', icon:Gauge },
+  { label:'Budget & IPC', route:'/control/commercial', icon:WalletCards },
+  { label:'Resources & cost', route:'/control/resource-costs', icon:UsersRound },
+  { label:'Time log', route:'/control/time-log', icon:Clock3 },
+];
+const control: NavItem[] = [
+  { label:'Commercial facts', route:'/control/commercial-facts', icon:BriefcaseBusiness },
+  { label:'Forecast intelligence', route:'/control/forecast-intelligence', icon:Gauge },
+  { label:'Workflows', route:'/control/workflows', icon:Workflow },
+  { label:'Transmittals', route:'/control/transmittals', icon:MessageCircle },
+  { label:'Notifications', route:'/control/communications', icon:Bell },
+];
+const administration: NavItem[] = [
+  { label:'Security & access', route:'/control/security', icon:ShieldCheck },
+  { label:'Roles & permissions', route:'/control/roles', icon:Settings2 },
+  { label:'Audit', route:'/control/audit', icon:ClipboardCheck },
+];
+
+export default function EnterpriseLayout() {
+  const { items, loading } = useNav();
+  const platformAdmin = isPlatformAdmin();
+  const [unreadNotifications,setUnreadNotifications]=useState(0);
+
+  // In-app notifications are durable server records. Refresh the tiny unread-count endpoint rather
+  // than the full inbox so an assignment/overdue result becomes visible anywhere in the app without
+  // requiring a page reload. This is intentionally resilient polling, not OS-level push: FCM/APNs or
+  // Web Push requires a separate device-token/subscription channel.
+  useEffect(()=>{
+    let active=true;
+    const refresh=()=>enterpriseApi.notificationUnread()
+      .then(count=>{if(active)setUnreadNotifications(Number(count)||0)})
+      .catch(()=>{ /* Navigation must remain usable when notification transport is unavailable. */ });
+    void refresh();
+    const timer=window.setInterval(refresh,15000);
+    return()=>{active=false;window.clearInterval(timer)};
+  },[]);
+
+  const catalogRoutes = new Set(items.filter(i=>i.module==='PROJECT_CONTROL').map(i=>i.route).filter(Boolean));
+  // Hiding links is convenience only; every API continues to enforce authorization server-side.
+  // Roles & permissions manages the platform-wide role matrix (RolePermissionAdminController), not
+  // a tenant feature — it has no feature_catalog/PROJECT_CONTROL row and never will, so it's gated
+  // directly off the platform-admin JWT claim instead of catalogRoutes.
+  // The `loading` branch is only a first-paint grace period so the sidebar doesn't flash empty
+  // before /me/nav resolves; once loaded, a genuinely empty catalog hides these links rather than
+  // showing every admin surface to whoever happens to be logged in.
+  const visible = (item:NavItem) => {
+    if (item.route === '/control/roles') return platformAdmin;
+    return item.route==='/control/projects' || loading || catalogRoutes.has(item.route);
+  };
+  const links = (values:NavItem[]) => values.filter(visible).map(item => {
+    const Icon=item.icon;
+    const showUnread=item.route==='/control/communications'&&unreadNotifications>0;
+    return <NavLink key={item.route} to={item.route} className={({isActive})=>`ec-nav-link ${isActive?'active':''}`}>
+      <Icon size={17}/><span>{item.label}</span>{showUnread&&<span aria-label={`${unreadNotifications} unread notifications`} style={{marginLeft:'auto',minWidth:20,height:20,padding:'0 6px',borderRadius:10,display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,background:'currentColor',color:'var(--ec-surface, white)'}}>{unreadNotifications>99?'99+':unreadNotifications}</span>}
+    </NavLink>;
+  });
+
+  return <div className="ec-shell">
+    <aside className="ec-sidebar">
+      <div className="ec-brand">
+        <div className="ec-brand-mark"><Building2 size={20}/></div>
+        <div><strong>Delivery Control</strong><span>Enterprise project workspace</span></div>
+      </div>
+      <div className="ec-workspace-pill"><span className="ec-live-dot"/><div><strong>Connected delivery</strong><small>Documents · work · cost · evidence</small></div></div>
+      <nav className="ec-nav">
+        <div className="ec-nav-group"><small>Delivery</small>{links(primary)}</div>
+        <div className="ec-nav-group"><small>Control & intelligence</small>{links(control)}</div>
+        <div className="ec-nav-group"><small>Administration</small>{links(administration)}</div>
+      </nav>
+      <div className="ec-sidebar-footer">
+        <NavLink to="/inbox" className="ec-utility-link"><MessageCircle size={16}/><span>WhatsApp inbox</span></NavLink>
+        <NavLink to="/settings/bot" className="ec-utility-link"><Bot size={16}/><span>Bot configuration</span></NavLink>
+        <div className="ec-sidebar-note"><span className="ec-live-dot"/><span>Enterprise mode active</span></div>
+      </div>
+    </aside>
+    <main className="ec-main"><Outlet/></main>
+  </div>;
+}

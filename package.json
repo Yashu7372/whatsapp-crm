@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "e2e:visual": "node scripts/capture-enterprise-evidence.mjs",
     "generate-icons": "node scripts/generate-icons.mjs",
     "cap:sync": "cap sync",
     "cap:android": "cap open android",
