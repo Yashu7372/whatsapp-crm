@@ -18,6 +18,8 @@ export interface WorkflowAction { id: Id; actionType: string; actionCode: string
 export interface WorkflowHistory { workflowInstanceId: Id; steps: WorkflowStepVisit[]; actions: WorkflowAction[] }
 export interface AccessDecision { outcome: 'ALLOW' | 'DENY'; reason: string }
 export interface AccessView { userId: Id; displayName: string; projectId: Id; scopeId?: Id | null; workspaceRoles: string[]; scopeAssignments: Array<{ assignmentId: Id; scopeId: Id; projectParticipantId: Id; responsibilityCode: string; accessLevel: string }>; decisions: Record<string, AccessDecision> }
+export interface WorkflowAssignmentOption { responsibilityCode: string; accessLevel: string; partyRole: string }
+export interface WorkflowConfigurationOptions { assignments: WorkflowAssignmentOption[]; enabledCapabilities: string[]; completionActions: string[] }
 
 export interface DemoUsers {
   admin: DemoAccount;
@@ -239,9 +241,9 @@ export async function createDemo(): Promise<DemoState> {
     [5, 'RE_FINAL_APPROVAL', 'Consultant RE Final Approval', 'APPROVE', 'CONSULTANT_RE'],
   ] as const;
   const workflowSteps: WorkflowStepDefinition[] = [];
-  for (const [sequence, stepCode, name, completionActionCode, responsibility] of stepInputs) {
+  for (const [sequence, stepCode, stepName, completionActionCode, responsibility] of stepInputs) {
     workflowSteps.push(await post<WorkflowStepDefinition>(`/api/v1/workflow-definitions/${workflowDefinition.id}/steps`, {
-      sequence, stepCode, name, completionActionCode,
+      sequence, stepCode, name: stepName, completionActionCode,
       assignmentJson: JSON.stringify({ responsibility }), configurationJson: '{}',
     }));
   }
@@ -278,6 +280,7 @@ export async function createDemo(): Promise<DemoState> {
 
 export const api = {
   getAccess: (projectId: Id, scopeId?: Id | null) => request<AccessView>(`/api/v1/projects/${projectId}/access${scopeId ? `?scopeId=${scopeId}` : ''}`),
+  getWorkflowOptions: (projectId: Id, scopeId: Id) => request<WorkflowConfigurationOptions>(`/api/v1/projects/${projectId}/access/workflow-options?scopeId=${scopeId}`),
   listDocuments: (projectId: Id) => request<DocumentView[]>(`/api/v1/projects/${projectId}/documents`),
   getDocument: (documentId: Id) => request<DocumentView>(`/api/v1/documents/${documentId}`),
   listRevisions: (documentId: Id) => request<RevisionView[]>(`/api/v1/documents/${documentId}/revisions`),
@@ -307,7 +310,7 @@ export const api = {
   },
   listDefinitions: (projectId: Id) => request<WorkflowDefinition[]>(`/api/v1/projects/${projectId}/workflow-definitions`),
   listDefinitionSteps: (definitionId: Id) => request<WorkflowStepDefinition[]>(`/api/v1/workflow-definitions/${definitionId}/steps`),
-  createWorkflowFlow: async (projectId: Id, scopeId: Id, input: { code: string; name: string; purposeCode: string; capabilityCode: string; steps: Array<{ stepCode: string; name: string; action: string; responsibility?: string }> }) => {
+  createWorkflowFlow: async (projectId: Id, scopeId: Id, input: { code: string; name: string; purposeCode: string; capabilityCode: string; steps: Array<{ stepCode: string; name: string; action: string; actResponsibilities: string[]; viewResponsibilities: string[] }> }) => {
     let definition = await post<WorkflowDefinition>(`/api/v1/projects/${projectId}/workflow-definitions`, {
       code: input.code, version: 1, name: input.name,
       purposeCode: input.purposeCode, requiredCapabilityCode: input.capabilityCode,
@@ -315,10 +318,13 @@ export const api = {
     const steps: WorkflowStepDefinition[] = [];
     for (let index = 0; index < input.steps.length; index++) {
       const step = input.steps[index];
+      const assignment: Record<string, unknown> = {};
+      if (step.actResponsibilities.length) assignment.act = { responsibilityCodes: step.actResponsibilities };
+      if (step.viewResponsibilities.length) assignment.view = { responsibilityCodes: step.viewResponsibilities };
       steps.push(await post<WorkflowStepDefinition>(`/api/v1/workflow-definitions/${definition.id}/steps`, {
         sequence: index + 1, stepCode: step.stepCode, name: step.name,
         completionActionCode: step.action,
-        assignmentJson: step.responsibility ? JSON.stringify({ responsibility: step.responsibility }) : '{}',
+        assignmentJson: JSON.stringify(assignment),
         configurationJson: '{}',
       }));
     }
