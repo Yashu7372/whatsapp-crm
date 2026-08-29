@@ -26,7 +26,7 @@ async function completeStep(page: Page) {
   await button.click();
 }
 
-test('authenticated workflow permissions, responsibility execution and visual builder', async ({ page }) => {
+test('authenticated workflow permissions, exact scope applicability and visual builder', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
 
@@ -91,11 +91,57 @@ test('authenticated workflow permissions, responsibility execution and visual bu
   await expectPermission(page, 'WORKFLOW_ACT', false);
   await expect(page.getByTestId('workflow-builder-locked')).toBeVisible();
 
-  // Only Project Admin gets the workflow designer. The options come from live scope assignments/capabilities.
+  // Only Project Admin gets the designer. Scope choices come from actual project_scopes rows.
   await quickLogin(page, 'admin@local.demo');
   await expectPermission(page, 'WORKFLOW_CONFIGURE', true);
   await expect(page.getByTestId('workflow-builder')).toBeVisible();
   await expect(page.getByTestId('workflow-builder-locked')).toHaveCount(0);
+
+  const scopeSelect = page.getByLabel('Apply workflow to Project Scope');
+  await expect(scopeSelect).toBeVisible();
+  await expect(scopeSelect.locator('option', { hasText: 'Construction / MEP' })).toHaveCount(1);
+  await expect(scopeSelect.locator('option', { hasText: 'Construction / Civil' })).toHaveCount(1);
+  await expect(page.getByTestId('selected-workflow-scope')).toContainText('Construction / MEP');
+  await expect(page.getByTestId('workflow-scope-capabilities')).toContainText('INSPECTION');
+  await expect(page.getByTestId('workflow-scope-capabilities')).toContainText('DOCUMENT_CONTROL');
+
+  // Civil exists in this project but has no configured capabilities in the UI demo.
+  // Selecting it must not infer MEP capabilities, responsibilities or workflow applicability.
+  const civilValue = await scopeSelect.locator('option', { hasText: 'Construction / Civil' }).getAttribute('value');
+  expect(civilValue).toBeTruthy();
+  await scopeSelect.selectOption(civilValue!);
+  await expect(page.getByTestId('selected-workflow-scope')).toContainText('Construction / Civil');
+  await expect(page.getByTestId('workflow-scope-capabilities')).toContainText('None configured');
+  await expect(page.getByTestId('workflow-required-capability')).toBeDisabled();
+  await expect(page.getByRole('button', { name: /Create, activate & bind/i })).toBeDisabled();
+
+  const mepValue = await scopeSelect.locator('option', { hasText: 'Construction / MEP' }).getAttribute('value');
+  expect(mepValue).toBeTruthy();
+  await scopeSelect.selectOption(mepValue!);
+  await expect(page.getByTestId('workflow-scope-capabilities')).toContainText('INSPECTION');
+  await expect(page.getByTestId('workflow-required-capability')).toBeEnabled();
+
+  // Backend applicability is exact: the demo ITR is bound to MEP, not Civil.
+  const applicability = await page.evaluate(async ({ projectId, mepScopeId, civilScopeId }) => {
+    const [mep, civil] = await Promise.all([
+      fetch(`/api/v1/projects/${projectId}/scopes/${mepScopeId}/available-workflow-definitions`, { credentials: 'include' }).then(response => response.json()),
+      fetch(`/api/v1/projects/${projectId}/scopes/${civilScopeId}/available-workflow-definitions`, { credentials: 'include' }).then(response => response.json()),
+    ]);
+    return { mep, civil } as { mep: Array<{ code: string }>; civil: Array<{ code: string }> };
+  }, {
+    projectId: await page.locator('.metric').filter({ hasText: 'Project' }).locator('strong').innerText().then(async () => {
+      // Project code is displayed, but API needs the UUID. Read it from locally persisted demo state.
+      return await page.evaluate(() => {
+        const key = Object.keys(localStorage).find(value => value.startsWith('project-control-foundation-demo-v'));
+        if (!key) throw new Error('Demo state missing');
+        return JSON.parse(localStorage.getItem(key)!).project.id as string;
+      });
+    }),
+    mepScopeId: mepValue!,
+    civilScopeId: civilValue!,
+  });
+  expect(applicability.mep.some(definition => definition.code === 'ITR_APPROVAL')).toBeTruthy();
+  expect(applicability.civil).toHaveLength(0);
 
   const template = page.getByLabel('Reusable starter template');
   await template.selectOption('ITR_WORK_VERIFICATION');
