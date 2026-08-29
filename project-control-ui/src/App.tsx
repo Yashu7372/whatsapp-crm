@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Activity, CheckCircle2, Database, ExternalLink, FileText, FileUp, GitBranch,
-  LogIn, LogOut, Play, Plus, RefreshCw, RotateCcw, ShieldCheck, Upload, UserCheck, Users, XCircle,
+  LogIn, LogOut, Play, RefreshCw, RotateCcw, Upload, UserCheck, Users, XCircle,
 } from 'lucide-react';
 import {
   api, auth, createDemo, DEMO_LOGIN_OPTIONS, LOCAL_DEMO_PASSWORD,
   type AccessView, type DemoState, type DocumentView, type Id, type RevisionView, type SessionUser,
-  type WorkflowDefinition, type WorkflowHistory, type WorkflowInstance, type WorkflowStepDefinition,
+  type WorkflowConfigurationOptions, type WorkflowDefinition, type WorkflowHistory,
+  type WorkflowInstance, type WorkflowStepDefinition,
 } from './api';
+import WorkflowDefinitionBuilder, { type WorkflowBuilderInput } from './WorkflowDefinitionBuilder';
 import './styles.css';
 
-const STORAGE_KEY = 'project-control-foundation-demo-v3';
+const STORAGE_KEY = 'project-control-foundation-demo-v4';
 
 function App() {
   const [session, setSession] = useState<SessionUser | null>(null);
@@ -22,6 +24,7 @@ function App() {
     return stored ? JSON.parse(stored) as DemoState : null;
   });
   const [access, setAccess] = useState<AccessView | null>(null);
+  const [workflowOptions, setWorkflowOptions] = useState<WorkflowConfigurationOptions | null>(null);
   const [documents, setDocuments] = useState<DocumentView[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<Id | null>(null);
   const [revisions, setRevisions] = useState<RevisionView[]>([]);
@@ -38,11 +41,6 @@ function App() {
   const [documentPdf, setDocumentPdf] = useState<File | null>(null);
   const [revisionCode, setRevisionCode] = useState('B');
   const [revisionPdf, setRevisionPdf] = useState<File | null>(null);
-  const [workflowCode, setWorkflowCode] = useState('DOC_REVIEW');
-  const [workflowName, setWorkflowName] = useState('Document Review');
-  const [workflowStepsText, setWorkflowStepsText] = useState(
-    'SUBMIT|Submit document|SUBMIT|SITE_TEAM\nREVIEW|Reviewer review|APPROVE|CONSULTANT_RE',
-  );
 
   const selectedDocument = useMemo(
     () => documents.find(document => document.id === selectedDocumentId) ?? null,
@@ -72,15 +70,27 @@ function App() {
     return users.find(user => user.id === reference)?.displayName ?? reference.slice(0, 8);
   }
 
-  function assignmentLabel(value?: string | null) {
-    if (!value) return 'Any authorized workflow actor';
+  function assignmentSummary(value?: string | null) {
+    if (!value || value === '{}') return { act: 'Any actionable actor', view: 'Any scope-visible user' };
     try {
-      const parsed = JSON.parse(value) as { responsibility?: string; responsibilityCodes?: string[] };
-      if (parsed.responsibility) return parsed.responsibility;
-      if (parsed.responsibilityCodes?.length) return parsed.responsibilityCodes.join(' / ');
-      return value === '{}' ? 'Any authorized workflow actor' : value;
+      const parsed = JSON.parse(value) as {
+        responsibility?: string;
+        responsibilityCodes?: string[];
+        act?: { responsibility?: string; responsibilityCodes?: string[] };
+        view?: { responsibility?: string; responsibilityCodes?: string[] };
+      };
+      const values = (rule?: { responsibility?: string; responsibilityCodes?: string[] }) => {
+        if (rule?.responsibility) return rule.responsibility;
+        if (rule?.responsibilityCodes?.length) return rule.responsibilityCodes.join(' / ');
+        return null;
+      };
+      const legacy = values(parsed);
+      return {
+        act: values(parsed.act) ?? legacy ?? 'Any actionable actor',
+        view: values(parsed.view) ?? 'Any scope-visible user',
+      };
     } catch {
-      return value;
+      return { act: value, view: 'Unknown' };
     }
   }
 
@@ -99,6 +109,14 @@ function App() {
     }
   }
 
+  async function loadWorkflowOptions(target: DemoState, nextAccess: AccessView) {
+    if (nextAccess.decisions.WORKFLOW_CONFIGURE?.outcome !== 'ALLOW') {
+      setWorkflowOptions(null);
+      return;
+    }
+    setWorkflowOptions(await api.getWorkflowOptions(target.project.id, target.mepScope.id));
+  }
+
   async function refreshAll(target = demo, preferredDocumentId = selectedDocumentId) {
     if (!target || !session) return;
     const [nextAccess, docs, defs] = await Promise.all([
@@ -106,6 +124,7 @@ function App() {
       api.listDocuments(target.project.id),
       api.listDefinitions(target.project.id),
     ]);
+    await loadWorkflowOptions(target, nextAccess);
     const documentId = docs.some(doc => doc.id === preferredDocumentId)
       ? preferredDocumentId!
       : docs.find(doc => doc.id === target.document.id)?.id ?? docs[0]?.id ?? null;
@@ -160,13 +179,14 @@ function App() {
       api.listDocuments(demo.project.id),
       api.listDefinitions(demo.project.id),
     ]);
+    await loadWorkflowOptions(demo, nextAccess);
     setAccess(nextAccess);
     setDocuments(docs);
     setDefinitions(defs);
     const documentId = docs.find(doc => doc.id === selectedDocumentId)?.id
       ?? docs.find(doc => doc.id === demo.document.id)?.id ?? docs[0]?.id ?? null;
     setSelectedDocumentId(documentId);
-    if (!documentId) { setRevisions([]); setWorkflow(null); setHistory(null); return; }
+    if (!documentId) { setRevisions([]); setWorkflow(null); setWorkflowSteps([]); setHistory(null); return; }
     const [revs, flows] = await Promise.all([api.listRevisions(documentId), api.listDocumentWorkflows(documentId)]);
     setRevisions(revs);
     const instance = flows.at(-1) ?? null;
@@ -174,6 +194,8 @@ function App() {
     if (instance) {
       const [steps, hist] = await Promise.all([api.listDefinitionSteps(instance.workflowDefinitionId), api.getHistory(instance.id)]);
       setWorkflowSteps(steps); setHistory(hist); setSelectedDefinitionId(instance.workflowDefinitionId);
+    } else {
+      setWorkflowSteps([]); setHistory(null);
     }
   }
 
@@ -188,6 +210,7 @@ function App() {
       await auth.logout();
       setSession(null);
       setAccess(null);
+      setWorkflowOptions(null);
       setMessage('Signed out. Choose another authenticated account.');
     });
   }
@@ -200,9 +223,30 @@ function App() {
       setSelectedDocumentId(created.document.id);
       const nextSession = await auth.me();
       setSession(nextSession);
-      await refreshAfterLogin(nextSession);
+      await refreshDemoAfterSeed(created, nextSession);
       setMessage('Demo created. The session is now Site Team; continue the ITR flow by signing in as each assigned user.');
     });
+  }
+
+  async function refreshDemoAfterSeed(created: DemoState, next: SessionUser) {
+    setSession(next);
+    const [nextAccess, docs, defs] = await Promise.all([
+      api.getAccess(created.project.id, created.mepScope.id),
+      api.listDocuments(created.project.id),
+      api.listDefinitions(created.project.id),
+    ]);
+    await loadWorkflowOptions(created, nextAccess);
+    setAccess(nextAccess); setDocuments(docs); setDefinitions(defs);
+    const documentId = created.document.id;
+    setSelectedDocumentId(documentId);
+    const [revs, flows] = await Promise.all([api.listRevisions(documentId), api.listDocumentWorkflows(documentId)]);
+    setRevisions(revs);
+    const instance = flows.at(-1) ?? null;
+    setWorkflow(instance);
+    if (instance) {
+      const [steps, hist] = await Promise.all([api.listDefinitionSteps(instance.workflowDefinitionId), api.getHistory(instance.id)]);
+      setWorkflowSteps(steps); setHistory(hist); setSelectedDefinitionId(instance.workflowDefinitionId);
+    }
   }
 
   async function chooseDocument(documentId: Id) {
@@ -232,24 +276,13 @@ function App() {
     });
   }
 
-  async function createWorkflow() {
+  async function createWorkflow(input: WorkflowBuilderInput) {
     if (!demo) return;
     await run('Creating and binding workflow...', async () => {
-      const steps = workflowStepsText.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
-        const [stepCode, name, action, responsibility] = line.split('|').map(value => value?.trim());
-        if (!stepCode || !name || !action) throw new Error('Each workflow step must be STEP_CODE|Name|ACTION|RESPONSIBILITY');
-        return { stepCode, name, action, responsibility: responsibility || undefined };
-      });
-      const created = await api.createWorkflowFlow(demo.project.id, demo.mepScope.id, {
-        code: workflowCode,
-        name: workflowName,
-        purposeCode: 'DOCUMENT_REVIEW',
-        capabilityCode: 'DOCUMENT_CONTROL',
-        steps,
-      });
+      const created = await api.createWorkflowFlow(demo.project.id, demo.mepScope.id, input);
       setSelectedDefinitionId(created.definition.id);
       await refreshAll();
-      setMessage(`Workflow ${created.definition.code} created with responsibility-aware steps.`);
+      setMessage(`Workflow ${created.definition.code} created from the visual step builder.`);
     });
   }
 
@@ -334,95 +367,92 @@ function App() {
     </div>;
   }
 
-  return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand"><GitBranch size={24}/><div><strong>Project Control</strong><span>Authenticated Workflow Lab</span></div></div>
-        <div className="side-section">
-          <span className="side-title">Implemented foundations</span>
-          <div className="side-item"><CheckCircle2 size={17}/> Project context</div>
-          <div className="side-item"><CheckCircle2 size={17}/> Documents & PDF</div>
-          <div className="side-item"><CheckCircle2 size={17}/> Generic workflow</div>
-          <div className="side-item"><CheckCircle2 size={17}/> Identity & access</div>
-          <div className="side-item"><CheckCircle2 size={17}/> Real authentication</div>
-          <div className="side-item"><CheckCircle2 size={17}/> Step assignments</div>
+  return <div className="app-shell">
+    <aside className="sidebar">
+      <div className="brand"><GitBranch size={24}/><div><strong>Project Control</strong><span>Authenticated Workflow Lab</span></div></div>
+      <div className="side-section">
+        <span className="side-title">System foundations · not user permissions</span>
+        <div className="side-item"><CheckCircle2 size={17}/> Project context</div>
+        <div className="side-item"><CheckCircle2 size={17}/> Documents & PDF</div>
+        <div className="side-item"><CheckCircle2 size={17}/> Generic workflow</div>
+        <div className="side-item"><CheckCircle2 size={17}/> Identity & access</div>
+        <div className="side-item"><CheckCircle2 size={17}/> Real authentication</div>
+        <div className="side-item"><CheckCircle2 size={17}/> Step act/view rules</div>
+      </div>
+      <div className="side-note">The items above show implemented platform foundations only. The red/green permission chips in the main screen show what the currently authenticated user may actually do.</div>
+    </aside>
+
+    <main>
+      <header className="topbar">
+        <div>
+          <p className="eyebrow">SPRING MODULITH · AUTHENTICATED LOCAL E2E</p>
+          <h1>Project Control Foundation</h1>
+          <p className="subtitle">Submit PDFs, configure reusable workflows visually, authenticate as each project actor and prove responsibility-aware execution.</p>
         </div>
-        <div className="side-note">Authentication comes from Spring Security session state. Business authorization still comes only from workspace, organization, project and scope relationships.</div>
-      </aside>
+        <div className="top-actions session-actions">
+          <div className="session-pill"><UserCheck size={16}/><span><strong>{session.displayName}</strong><small>{session.email}</small></span></div>
+          <button className="ghost" disabled={busy || !demo} onClick={() => run('Refreshing...', () => refreshAll())}><RefreshCw size={16}/> Refresh</button>
+          {isAdmin && <button className="primary" disabled={busy} onClick={seedDemo}><Play size={16}/> Create fresh demo</button>}
+          <button className="ghost" disabled={busy} onClick={logout}><LogOut size={16}/> Logout</button>
+        </div>
+      </header>
 
-      <main>
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">SPRING MODULITH · AUTHENTICATED LOCAL E2E</p>
-            <h1>Project Control Foundation</h1>
-            <p className="subtitle">Submit PDFs, configure workflows, authenticate as each project actor and prove responsibility-aware workflow execution.</p>
-          </div>
-          <div className="top-actions session-actions">
-            <div className="session-pill"><UserCheck size={16}/><span><strong>{session.displayName}</strong><small>{session.email}</small></span></div>
-            <button className="ghost" disabled={busy || !demo} onClick={() => run('Refreshing...', () => refreshAll())}><RefreshCw size={16}/> Refresh</button>
-            {isAdmin && <button className="primary" disabled={busy} onClick={seedDemo}><Play size={16}/> Create fresh demo</button>}
-            <button className="ghost" disabled={busy} onClick={logout}><LogOut size={16}/> Logout</button>
-          </div>
-        </header>
+      <div className={`status ${error ? 'status-error' : ''}`}><Activity size={17}/><span>{error ?? message}</span>{busy && <span className="pulse">working</span>}</div>
 
-        <div className={`status ${error ? 'status-error' : ''}`}><Activity size={17}/><span>{error ?? message}</span>{busy && <span className="pulse">working</span>}</div>
+      <section className="user-bar panel">
+        <div className="user-bar-title"><Users size={20}/><div><strong>Authenticate as another project actor</strong><small>Blue identifies the signed-in account. Green/red chips below are the backend authorization decisions for that account.</small></div></div>
+        <div className="user-options auth-options">{DEMO_LOGIN_OPTIONS.map(([email, label]) => <button key={email} className={session.email === email ? 'user-pill active' : 'user-pill'} onClick={() => quickSignIn(email)} disabled={busy}><span>{label}</span><small>{email}</small></button>)}</div>
+        {access && <div className="permission-row" data-testid="permission-row">{['DOCUMENT_VIEW','DOCUMENT_SUBMIT','DOCUMENT_CONTENT_VIEW','WORKFLOW_CONFIGURE','WORKFLOW_START','WORKFLOW_ACT'].map(action => <span data-testid={`permission-${action}`} key={action} className={can(action) ? 'permission allow' : 'permission deny'} title={access.decisions[action]?.reason}>{can(action) ? '✓' : '×'} {action.replaceAll('_',' ')}</span>)}</div>}
+      </section>
 
-        <section className="user-bar panel">
-          <div className="user-bar-title"><Users size={20}/><div><strong>Authenticate as another project actor</strong><small>Each button performs a real password login; there is no actor-id override header.</small></div></div>
-          <div className="user-options auth-options">{DEMO_LOGIN_OPTIONS.map(([email, label]) => <button key={email} className={session.email === email ? 'user-pill active' : 'user-pill'} onClick={() => quickSignIn(email)} disabled={busy}><span>{label}</span><small>{email}</small></button>)}</div>
-          {access && <div className="permission-row">{['DOCUMENT_VIEW','DOCUMENT_SUBMIT','DOCUMENT_CONTENT_VIEW','WORKFLOW_CONFIGURE','WORKFLOW_START','WORKFLOW_ACT'].map(action => <span key={action} className={can(action) ? 'permission allow' : 'permission deny'}>{can(action) ? '✓' : '×'} {action.replaceAll('_',' ')}</span>)}</div>}
+      {!demo ? <section className="empty-card"><Database size={40}/><h2>No local demo yet</h2><p>Sign in as <b>Project Admin</b> and create a fresh demo. The demo then signs in as Site Team so the real ITR sequence can begin.</p>{!isAdmin && <button className="primary" onClick={() => quickSignIn('admin@local.demo')}>Sign in as Project Admin</button>}</section> : <>
+        <section className="metrics-grid">
+          <Metric label="Project" value={demo.project.code} note={demo.project.name}/>
+          <Metric label="Contractor" value={demo.contractor.displayName} note="SUBCONTRACTOR"/>
+          <Metric label="Consultant" value={demo.consultant.displayName} note="CONSULTANT"/>
+          <Metric label="Scope" value={demo.mepScope.code} note={`${demo.constructionScope.name} / ${demo.mepScope.name}`}/>
         </section>
 
-        {!demo ? (
-          <section className="empty-card"><Database size={40}/><h2>No local demo yet</h2><p>Sign in as <b>Project Admin</b> and create a fresh demo. The demo then signs in as Site Team so the real ITR sequence can begin.</p>{!isAdmin && <button className="primary" onClick={() => quickSignIn('admin@local.demo')}>Sign in as Project Admin</button>}</section>
-        ) : (
-          <>
-            <section className="metrics-grid">
-              <Metric label="Project" value={demo.project.code} note={demo.project.name}/>
-              <Metric label="Contractor" value={demo.contractor.displayName} note="SUBCONTRACTOR"/>
-              <Metric label="Consultant" value={demo.consultant.displayName} note="CONSULTANT"/>
-              <Metric label="Scope" value={demo.mepScope.code} note={`${demo.constructionScope.name} / ${demo.mepScope.name}`}/>
-            </section>
+        <section className="two-column">
+          <article className="panel">
+            <div className="panel-heading"><div><p className="eyebrow">DOCUMENT CONTROL</p><h2><FileText size={20}/> Documents & PDF</h2></div><span className="badge">{documents.length} visible</span></div>
+            <div className="builder-box">
+              <h3><FileUp size={17}/> Submit document</h3>
+              <input value={documentTitle} onChange={e => setDocumentTitle(e.target.value)} placeholder="Document title"/>
+              <input type="file" accept="application/pdf" onChange={e => setDocumentPdf(e.target.files?.[0] ?? null)}/>
+              <button className="primary" disabled={busy || !can('DOCUMENT_SUBMIT') || !documentPdf || !documentTitle} onClick={submitDocument}><Upload size={15}/> Submit PDF</button>
+              {!can('DOCUMENT_SUBMIT') && <small className="denied-note">Current authenticated user is read-only for document submission.</small>}
+            </div>
+            <div className="document-list">{documents.map(doc => <button className={doc.id === selectedDocumentId ? 'document-select active' : 'document-select'} key={doc.id} onClick={() => chooseDocument(doc.id)}><strong>{doc.documentNumber}</strong><span>{doc.title}</span><small>Rev {doc.currentRevisionCode ?? '—'} · {doc.status}</small></button>)}</div>
+            {selectedDocument && <div className="document-card selected-card"><div><strong>{selectedDocument.documentNumber}</strong><span>{selectedDocument.documentType}</span></div><h3>{selectedDocument.title}</h3><pre>{prettyJson(selectedDocument.metadataJson)}</pre></div>}
+            <div className="subheading">Revision history</div>
+            <div className="timeline compact">{revisions.map(rev => <div className="timeline-row" key={rev.id}><span className="dot"/><div><strong>Revision {rev.revisionCode}</strong><p>{rev.changeNotes}</p><small>{rev.originalFilename} · {rev.revisionStatus}</small><div><button className="link-button" disabled={busy || !can('DOCUMENT_CONTENT_VIEW') || !rev.contentUri?.startsWith('local-file:')} onClick={() => run('Opening PDF...', () => api.openPdf(rev.id))}><ExternalLink size={14}/> View PDF</button></div></div></div>)}</div>
+            <div className="inline-form revision-form"><input value={revisionCode} maxLength={8} onChange={e => setRevisionCode(e.target.value.toUpperCase())}/><input type="file" accept="application/pdf" onChange={e => setRevisionPdf(e.target.files?.[0] ?? null)}/><button disabled={busy || !can('DOCUMENT_SUBMIT') || !revisionPdf || !selectedDocument} onClick={uploadRevision}><Upload size={15}/> Upload revision</button></div>
+          </article>
 
-            <section className="two-column">
-              <article className="panel">
-                <div className="panel-heading"><div><p className="eyebrow">DOCUMENT CONTROL</p><h2><FileText size={20}/> Documents & PDF</h2></div><span className="badge">{documents.length} visible</span></div>
-                <div className="builder-box">
-                  <h3><FileUp size={17}/> Submit document</h3>
-                  <input value={documentTitle} onChange={e => setDocumentTitle(e.target.value)} placeholder="Document title"/>
-                  <input type="file" accept="application/pdf" onChange={e => setDocumentPdf(e.target.files?.[0] ?? null)}/>
-                  <button className="primary" disabled={busy || !can('DOCUMENT_SUBMIT') || !documentPdf || !documentTitle} onClick={submitDocument}><Upload size={15}/> Submit PDF</button>
-                  {!can('DOCUMENT_SUBMIT') && <small className="denied-note">Current authenticated user is read-only for document submission.</small>}
-                </div>
-                <div className="document-list">{documents.map(doc => <button className={doc.id === selectedDocumentId ? 'document-select active' : 'document-select'} key={doc.id} onClick={() => chooseDocument(doc.id)}><strong>{doc.documentNumber}</strong><span>{doc.title}</span><small>Rev {doc.currentRevisionCode ?? '—'} · {doc.status}</small></button>)}</div>
-                {selectedDocument && <div className="document-card selected-card"><div><strong>{selectedDocument.documentNumber}</strong><span>{selectedDocument.documentType}</span></div><h3>{selectedDocument.title}</h3><pre>{prettyJson(selectedDocument.metadataJson)}</pre></div>}
-                <div className="subheading">Revision history</div>
-                <div className="timeline compact">{revisions.map(rev => <div className="timeline-row" key={rev.id}><span className="dot"/><div><strong>Revision {rev.revisionCode}</strong><p>{rev.changeNotes}</p><small>{rev.originalFilename} · {rev.revisionStatus}</small><div><button className="link-button" disabled={busy || !can('DOCUMENT_CONTENT_VIEW') || !rev.contentUri?.startsWith('local-file:')} onClick={() => run('Opening PDF...', () => api.openPdf(rev.id))}><ExternalLink size={14}/> View PDF</button></div></div></div>)}</div>
-                <div className="inline-form revision-form"><input value={revisionCode} maxLength={8} onChange={e => setRevisionCode(e.target.value.toUpperCase())}/><input type="file" accept="application/pdf" onChange={e => setRevisionPdf(e.target.files?.[0] ?? null)}/><button disabled={busy || !can('DOCUMENT_SUBMIT') || !revisionPdf || !selectedDocument} onClick={uploadRevision}><Upload size={15}/> Upload revision</button></div>
-              </article>
+          <article className="panel workflow-panel">
+            <div className="panel-heading"><div><p className="eyebrow">GENERIC WORKFLOW</p><h2><GitBranch size={20}/> Document Workflow</h2></div><span className={`badge ${workflow?.status === 'RUNNING' ? 'badge-live' : ''}`}>{workflow?.status ?? 'NOT STARTED'}</span></div>
 
-              <article className="panel">
-                <div className="panel-heading"><div><p className="eyebrow">GENERIC WORKFLOW</p><h2><GitBranch size={20}/> Document Workflow</h2></div><span className={`badge ${workflow?.status === 'RUNNING' ? 'badge-live' : ''}`}>{workflow?.status ?? 'NOT STARTED'}</span></div>
-                <div className="builder-box">
-                  <h3><Plus size={17}/> Create workflow definition</h3>
-                  <div className="form-grid"><input value={workflowCode} onChange={e => setWorkflowCode(e.target.value.toUpperCase())} placeholder="WORKFLOW_CODE"/><input value={workflowName} onChange={e => setWorkflowName(e.target.value)} placeholder="Workflow name"/></div>
-                  <textarea rows={3} value={workflowStepsText} onChange={e => setWorkflowStepsText(e.target.value)} />
-                  <small>One step per line: STEP_CODE|Step name|COMPLETION_ACTION|RESPONSIBILITY. Responsibility is optional; when supplied the backend enforces it.</small>
-                  <button disabled={busy || !can('PROJECT_MANAGE') || !workflowCode || !workflowName} onClick={createWorkflow}><ShieldCheck size={15}/> Create + activate + bind</button>
-                  {!can('PROJECT_MANAGE') && <small className="denied-note">Authenticate as Project Admin to configure workflow definitions.</small>}
-                </div>
-                <div className="start-flow-row"><select value={selectedDefinitionId ?? ''} onChange={e => setSelectedDefinitionId(e.target.value)}>{definitions.map(def => <option key={def.id} value={def.id}>{def.code} v{def.version} · {def.status}</option>)}</select><button className="primary" disabled={busy || !selectedDocument || !selectedDefinitionId || !can('WORKFLOW_START')} onClick={startWorkflow}><Play size={15}/> Start for selected document</button></div>
-                {workflow && <><div className="workflow-title"><strong>{workflow.businessKey}</strong><span>{workflow.workflowCode} · {workflow.purposeCode}</span><h3>{workflow.title}</h3></div><div className="stepper">{workflowSteps.map(step => { const visit = history?.steps.filter(v => v.stepCode === step.stepCode).at(-1); const active = workflow.currentStep?.stepCode === step.stepCode; return <div className={`step ${active ? 'active' : ''} ${visit?.status === 'COMPLETED' ? 'done' : ''}`} key={step.id}><span>{step.sequence}</span><div><strong>{step.name}</strong><small>{step.stepCode}{visit && ` · visit ${visit.visitNumber} · ${visit.status}`}</small><small className="assignment">Assigned: {assignmentLabel(step.assignmentJson)}</small></div></div>; })}</div></>}
-                {workflow?.status === 'RUNNING' && workflow.currentStep && <div className="action-box"><div><span>Current step</span><strong>{workflow.currentStep.stepName}</strong><small>expects: {currentDefinitionStep?.completionActionCode}</small><small className="assignment-callout">Required responsibility: {assignmentLabel(workflow.currentStep.assignmentJson)}</small></div><label>Comment<textarea value={comment} onChange={e => setComment(e.target.value)} rows={2}/></label><div className="action-buttons"><button disabled={busy || !can('WORKFLOW_ACT')} onClick={addComment}>Comment</button><button className="success" disabled={busy || !can('WORKFLOW_ACT') || !currentDefinitionStep} onClick={completeStep}><CheckCircle2 size={15}/> Complete step</button>{earlierSteps.length > 0 && <select disabled={busy || !can('WORKFLOW_ACT')} defaultValue="" onChange={e => { if (e.target.value) returnTo(e.target.value); e.currentTarget.value=''; }}><option value="" disabled>Return to…</option>{earlierSteps.map(step => <option key={step.id} value={step.stepCode}>{step.name}</option>)}</select>}<button className="danger" disabled={busy || !can('WORKFLOW_ACT')} onClick={rejectWorkflow}><XCircle size={15}/> Reject</button></div><small className="denied-note">Even when WORKFLOW ACT is generally allowed, the backend will deny this action unless the authenticated actor matches the current step assignment.</small></div>}
-              </article>
-            </section>
+            <div className="subheading">Workflow configuration</div>
+            <WorkflowDefinitionBuilder disabled={!can('WORKFLOW_CONFIGURE')} busy={busy} options={workflowOptions} onCreate={createWorkflow}/>
 
-            <section className="panel history-panel"><div className="panel-heading"><div><p className="eyebrow">AUDITABILITY</p><h2><RotateCcw size={20}/> Workflow action history</h2></div><span className="badge">{history?.actions.length ?? 0} actions</span></div><div className="history-table"><div className="history-head"><span>Action</span><span>Authenticated user</span><span>Transition</span><span>Comment</span></div>{history?.actions.map(action => <div className="history-row" key={action.id}><span><b>{action.actionType}</b><small>{action.actionCode}</small></span><span>{actorName(action.actorReference)}</span><span>{action.fromStepCode ?? 'START'} → {action.toStepCode ?? 'END'}</span><span>{action.comment ?? '—'}</span></div>)}</div></section>
-          </>
-        )}
-      </main>
-    </div>
-  );
+            <div className="subheading">Existing reusable definitions</div>
+            <div className="start-flow-row"><select aria-label="Reusable workflow definition" value={selectedDefinitionId ?? ''} onChange={e => setSelectedDefinitionId(e.target.value)}>{definitions.map(def => <option key={def.id} value={def.id}>{def.code} v{def.version} · {def.status}</option>)}</select><button className="primary" disabled={busy || !selectedDocument || !selectedDefinitionId || !can('WORKFLOW_START')} onClick={startWorkflow}><Play size={15}/> Start for selected document</button></div>
+
+            {workflow && <><div className="workflow-title"><strong>{workflow.businessKey}</strong><span>{workflow.workflowCode} · {workflow.purposeCode}</span><h3>{workflow.title}</h3></div><div className="stepper">{workflowSteps.map(step => {
+              const visit = history?.steps.filter(v => v.stepCode === step.stepCode).at(-1);
+              const active = workflow.currentStep?.stepCode === step.stepCode;
+              const assignment = assignmentSummary(step.assignmentJson);
+              return <div className={`step ${active ? 'active' : ''} ${visit?.status === 'COMPLETED' ? 'done' : ''}`} key={step.id}><span>{step.sequence}</span><div><strong>{step.name}</strong><small>{step.stepCode}{visit && ` · visit ${visit.visitNumber} · ${visit.status}`}</small><small className="assignment">Act: {assignment.act}</small><small className="assignment">View: {assignment.view}</small></div></div>;
+            })}</div></>}
+            {workflow?.status === 'RUNNING' && workflow.currentStep && <div className="action-box"><div><span>Current step</span><strong>{workflow.currentStep.stepName}</strong><small>expects: {currentDefinitionStep?.completionActionCode}</small><small className="assignment-callout">Can act: {assignmentSummary(workflow.currentStep.assignmentJson).act}</small><small className="assignment-callout">Can view: {assignmentSummary(workflow.currentStep.assignmentJson).view}</small></div><label>Comment<textarea value={comment} onChange={e => setComment(e.target.value)} rows={2}/></label><div className="action-buttons"><button disabled={busy || !can('WORKFLOW_ACT')} onClick={addComment}>Comment</button><button className="success" disabled={busy || !can('WORKFLOW_ACT') || !currentDefinitionStep} onClick={completeStep}><CheckCircle2 size={15}/> Complete step</button>{earlierSteps.length > 0 && <select disabled={busy || !can('WORKFLOW_ACT')} defaultValue="" onChange={e => { if (e.target.value) returnTo(e.target.value); e.currentTarget.value=''; }}><option value="" disabled>Return to…</option>{earlierSteps.map(step => <option key={step.id} value={step.stepCode}>{step.name}</option>)}</select>}<button className="danger" disabled={busy || !can('WORKFLOW_ACT')} onClick={rejectWorkflow}><XCircle size={15}/> Reject</button></div><small className="denied-note">WORKFLOW ACT is only the coarse permission. The backend also checks the active step's configured act responsibility before accepting an action.</small></div>}
+          </article>
+        </section>
+
+        <section className="panel history-panel"><div className="panel-heading"><div><p className="eyebrow">AUDITABILITY</p><h2><RotateCcw size={20}/> Workflow action history</h2></div><span className="badge">{history?.actions.length ?? 0} actions</span></div><div className="history-table"><div className="history-head"><span>Action</span><span>Authenticated user</span><span>Transition</span><span>Comment</span></div>{history?.actions.map(action => <div className="history-row" key={action.id}><span><b>{action.actionType}</b><small>{action.actionCode}</small></span><span>{actorName(action.actorReference)}</span><span>{action.fromStepCode ?? 'START'} → {action.toStepCode ?? 'END'}</span><span>{action.comment ?? '—'}</span></div>)}</div></section>
+      </>}
+    </main>
+  </div>;
 }
 
 function Metric({ label, value, note }: { label: string; value: string; note: string }) {
