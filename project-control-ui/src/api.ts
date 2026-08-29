@@ -11,6 +11,7 @@ export interface SessionUser { userId: Id; email: string; displayName: string }
 export interface DocumentView { id: Id; projectId: Id; primaryScopeId?: Id | null; originatorOrganizationId?: Id | null; documentNumber: string; numberSource: string; numberSeriesCode?: string | null; documentType: string; title: string; description?: string | null; classificationCode?: string | null; metadataJson: string; status: string; currentRevisionSequence: number; currentRevisionCode?: string | null }
 export interface RevisionView { id: Id; documentId: Id; sequenceNumber: number; revisionCode: string; revisionStatus: string; changeNotes?: string | null; contentUri?: string | null; contentSha256?: string | null; originalFilename?: string | null; mediaType?: string | null; sizeBytes?: number | null; createdAt: string }
 export interface WorkflowDefinition { id: Id; projectId: Id; code: string; version: number; name: string; purposeCode: string; requiredCapabilityCode: string; status: string }
+export interface WorkflowBinding { id: Id; projectId: Id; scopeId: Id; workflowDefinitionId: Id; enabled: boolean; configurationJson: string }
 export interface WorkflowStepDefinition { id: Id; workflowDefinitionId: Id; sequence: number; stepCode: string; name: string; completionActionCode: string; assignmentJson: string; configurationJson: string }
 export interface WorkflowStepVisit { id: Id; workflowInstanceId: Id; stepDefinitionId: Id; sequence: number; stepCode: string; stepName: string; visitNumber: number; assignmentJson: string; status: string; activatedAt: string; completedAt?: string | null }
 export interface WorkflowInstance { id: Id; projectId: Id; scopeId: Id; workflowDefinitionId: Id; workflowCode: string; workflowVersion: number; purposeCode: string; requiredCapabilityCode: string; businessKey: string; title: string; status: string; currentStep?: WorkflowStepVisit | null; initiatedByReference?: string | null; initiatedAt: string; completedAt?: string | null; contextJson: string }
@@ -19,7 +20,7 @@ export interface WorkflowHistory { workflowInstanceId: Id; steps: WorkflowStepVi
 export interface AccessDecision { outcome: 'ALLOW' | 'DENY'; reason: string }
 export interface AccessView { userId: Id; displayName: string; projectId: Id; scopeId?: Id | null; workspaceRoles: string[]; scopeAssignments: Array<{ assignmentId: Id; scopeId: Id; projectParticipantId: Id; responsibilityCode: string; accessLevel: string }>; decisions: Record<string, AccessDecision> }
 export interface WorkflowAssignmentOption { responsibilityCode: string; accessLevel: string; partyRole: string }
-export interface WorkflowConfigurationOptions { assignments: WorkflowAssignmentOption[]; enabledCapabilities: string[]; completionActions: string[] }
+export interface WorkflowConfigurationOptions { projectId: Id; scopeId: Id; assignments: WorkflowAssignmentOption[]; enabledCapabilities: string[]; completionActions: string[] }
 
 export interface DemoUsers {
   admin: DemoAccount;
@@ -281,6 +282,12 @@ export async function createDemo(): Promise<DemoState> {
 export const api = {
   getAccess: (projectId: Id, scopeId?: Id | null) => request<AccessView>(`/api/v1/projects/${projectId}/access${scopeId ? `?scopeId=${scopeId}` : ''}`),
   getWorkflowOptions: (projectId: Id, scopeId: Id) => request<WorkflowConfigurationOptions>(`/api/v1/projects/${projectId}/access/workflow-options?scopeId=${scopeId}`),
+  listScopes: (projectId: Id) => request<Scope[]>(`/api/v1/projects/${projectId}/scopes`),
+  listScopeCapabilities: (projectId: Id, scopeId: Id) => request<Capability[]>(`/api/v1/projects/${projectId}/scopes/${scopeId}/capabilities`),
+  listAvailableScopeWorkflowDefinitions: (projectId: Id, scopeId: Id) => request<WorkflowDefinition[]>(`/api/v1/projects/${projectId}/scopes/${scopeId}/available-workflow-definitions`),
+  listProjectWorkflowBindings: (projectId: Id) => request<WorkflowBinding[]>(`/api/v1/projects/${projectId}/workflow-bindings`),
+  listDefinitionBindings: (projectId: Id, definitionId: Id) => request<WorkflowBinding[]>(`/api/v1/projects/${projectId}/workflow-definitions/${definitionId}/bindings`),
+  bindDefinitionToScope: (projectId: Id, scopeId: Id, definitionId: Id, enabled = true) => put<WorkflowBinding>(`/api/v1/projects/${projectId}/scopes/${scopeId}/workflow-bindings/${definitionId}`, { enabled, configurationJson: '{}' }),
   listDocuments: (projectId: Id) => request<DocumentView[]>(`/api/v1/projects/${projectId}/documents`),
   getDocument: (documentId: Id) => request<DocumentView>(`/api/v1/documents/${documentId}`),
   listRevisions: (documentId: Id) => request<RevisionView[]>(`/api/v1/documents/${documentId}/revisions`),
@@ -310,7 +317,8 @@ export const api = {
   },
   listDefinitions: (projectId: Id) => request<WorkflowDefinition[]>(`/api/v1/projects/${projectId}/workflow-definitions`),
   listDefinitionSteps: (definitionId: Id) => request<WorkflowStepDefinition[]>(`/api/v1/workflow-definitions/${definitionId}/steps`),
-  createWorkflowFlow: async (projectId: Id, scopeId: Id, input: { code: string; name: string; purposeCode: string; capabilityCode: string; steps: Array<{ stepCode: string; name: string; action: string; actResponsibilities: string[]; viewResponsibilities: string[] }> }) => {
+  createWorkflowFlow: async (projectId: Id, scopeId: Id, input: { scopeId?: Id; code: string; name: string; purposeCode: string; capabilityCode: string; steps: Array<{ stepCode: string; name: string; action: string; actResponsibilities: string[]; viewResponsibilities: string[] }> }) => {
+    const bindingScopeId = input.scopeId ?? scopeId;
     let definition = await post<WorkflowDefinition>(`/api/v1/projects/${projectId}/workflow-definitions`, {
       code: input.code, version: 1, name: input.name,
       purposeCode: input.purposeCode, requiredCapabilityCode: input.capabilityCode,
@@ -329,11 +337,12 @@ export const api = {
       }));
     }
     definition = await post<WorkflowDefinition>(`/api/v1/workflow-definitions/${definition.id}/activate`, {});
-    await put(`/api/v1/projects/${projectId}/scopes/${scopeId}/workflow-bindings/${definition.id}`, {
+    await put(`/api/v1/projects/${projectId}/scopes/${bindingScopeId}/workflow-bindings/${definition.id}`, {
       enabled: true, configurationJson: '{}',
     });
     return { definition, steps };
   },
+  listAvailableDocumentWorkflowDefinitions: (documentId: Id) => request<WorkflowDefinition[]>(`/api/v1/documents/${documentId}/available-workflow-definitions`),
   startDocumentWorkflow: (documentId: Id, definitionId: Id, title: string) => post<WorkflowInstance>(`/api/v1/documents/${documentId}/workflow-instances`, {
     workflowDefinitionId: definitionId,
     businessKey: `WF-${Date.now().toString().slice(-8)}`,
