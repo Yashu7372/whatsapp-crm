@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/project-control-modulith-ui
+      - feature/project-control-complete-ui
     paths:
       - 'project-control-ui/**'
       - '.github/workflows/project-control-ui.yml'
@@ -29,6 +30,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Build
         run: npm run build
+      - name: Build production container
+        run: docker build -t project-control-ui:ci .
 
   e2e:
     runs-on: ubuntu-latest
