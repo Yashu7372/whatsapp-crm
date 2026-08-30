@@ -1,6 +1,7 @@
 name: Project Control UI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - feature/project-control-modulith-ui
