@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
-  Activity, Building2, CheckCircle2, ChevronRight, ClipboardList, Database,
-  ExternalLink, FileText, FileUp, FolderTree, GitBranch, Home, Layers3, LogIn,
-  LogOut, Menu, Play, Plus, RefreshCw, Save, Settings, ShieldCheck, Upload,
-  UserRound, Workflow, X, XCircle,
+  Activity, BadgeDollarSign, Building2, CheckCircle2, ChevronRight, ClipboardCheck,
+  ClipboardList, Database, ExternalLink, FileText, FileUp, FolderTree, GitBranch,
+  Home, Landmark, Layers3, LogIn, LogOut, Menu, Play, Plus, RefreshCw, Save,
+  Settings, ShieldCheck, TrendingUp, Upload, UserRound, Workflow, X, XCircle,
 } from 'lucide-react';
 import {
   api, auth, createDemo, DEMO_LOGIN_OPTIONS, LOCAL_DEMO_PASSWORD,
@@ -13,26 +13,44 @@ import {
   type WorkflowInstance, type WorkflowStepDefinition,
 } from './api';
 import { productApi, type DocumentNumberSeries } from './productApi';
+import { CommercialScreen, CostControlScreen, FinancialScreen, VerificationScreen } from './ControlScreens';
 import WorkflowDefinitionBuilder, { type WorkflowBuilderInput } from './WorkflowDefinitionBuilder';
 import './styles.css';
 
 const STORAGE_KEY = 'project-control-foundation-demo-v4';
 
-type ScreenKey = 'overview' | 'documents' | 'workflows' | 'designer' | 'admin';
+type ScreenKey =
+  | 'overview'
+  | 'documents'
+  | 'workflows'
+  | 'verification'
+  | 'cost'
+  | 'commercial'
+  | 'financial'
+  | 'designer'
+  | 'admin';
 
 const screenPath: Record<ScreenKey, string> = {
   overview: '/overview',
   documents: '/documents',
   workflows: '/workflows',
+  verification: '/verification',
+  cost: '/cost-control',
+  commercial: '/commercial',
+  financial: '/financial',
   designer: '/workflow-designer',
   admin: '/project-admin',
 };
 
 function screenFromPath(pathname = window.location.pathname): ScreenKey {
-  if (pathname.includes('documents')) return 'documents';
   if (pathname.includes('workflow-designer')) return 'designer';
-  if (pathname.includes('workflows')) return 'workflows';
   if (pathname.includes('project-admin')) return 'admin';
+  if (pathname.includes('documents')) return 'documents';
+  if (pathname.includes('verification')) return 'verification';
+  if (pathname.includes('cost-control')) return 'cost';
+  if (pathname.includes('commercial')) return 'commercial';
+  if (pathname.includes('financial')) return 'financial';
+  if (pathname.includes('workflows')) return 'workflows';
   return 'overview';
 }
 
@@ -198,6 +216,10 @@ function App() {
     { key: 'overview', label: 'Overview', icon: <Home size={18}/> },
     { key: 'documents', label: 'Documents', icon: <FileText size={18}/> },
     { key: 'workflows', label: 'Workflows', icon: <Workflow size={18}/> },
+    { key: 'verification', label: 'Verification', icon: <ClipboardCheck size={18}/> },
+    { key: 'cost', label: 'Cost Control', icon: <BadgeDollarSign size={18}/> },
+    { key: 'commercial', label: 'Commercial & IPC', icon: <Landmark size={18}/> },
+    { key: 'financial', label: 'Financial & Cash Flow', icon: <TrendingUp size={18}/> },
     { key: 'designer', label: 'Workflow Designer', icon: <GitBranch size={18}/>, admin: true },
     { key: 'admin', label: 'Project Administration', icon: <Settings size={18}/>, admin: true },
   ];
@@ -260,6 +282,12 @@ function App() {
             context={context} scopes={scopes} documents={documents} definitions={definitions}
             onDataChanged={() => refreshCore()}
           />}
+          {screen === 'verification' && <VerificationScreen
+            context={context} scopes={scopes} documents={documents} definitions={definitions}
+          />}
+          {screen === 'cost' && <CostControlScreen context={context} scopes={scopes} documents={documents}/>} 
+          {screen === 'commercial' && <CommercialScreen context={context} scopes={scopes} documents={documents}/>} 
+          {screen === 'financial' && <FinancialScreen context={context}/>} 
           {screen === 'designer' && isAdmin && <WorkflowDesignerScreen
             context={context} scopes={scopes} definitions={definitions} bindings={bindings}
             onDataChanged={() => refreshCore()}
@@ -320,7 +348,7 @@ function OverviewScreen({ context, scopes, documents, definitions, bindings, onN
   const activeDefinitions = definitions.filter(item => item.status === 'ACTIVE').length;
   const activeBindings = bindings.filter(item => item.enabled).length;
   return <div className="screen-stack" data-testid="screen-overview">
-    <ScreenHeader eyebrow="PROJECT OVERVIEW" title={context.project.name} description="A live view of the Project Control foundations configured for this project."/>
+    <ScreenHeader eyebrow="PROJECT OVERVIEW" title={context.project.name} description="A live view of the Project Control operating ledger, controlled documents and configured processes."/>
 
     <div className="metric-cards">
       <MetricCard label="Documents" value={documents.length} note="Visible to your project context" icon={<FileText size={19}/>} onClick={() => onNavigate('documents')}/>
@@ -850,6 +878,10 @@ function screenTitle(screen: ScreenKey) {
   switch (screen) {
     case 'documents': return 'Document Register';
     case 'workflows': return 'Workflow Centre';
+    case 'verification': return 'Verification & Measurement';
+    case 'cost': return 'Cost Control';
+    case 'commercial': return 'Commercial & IPC';
+    case 'financial': return 'Financial & Cash Flow';
     case 'designer': return 'Workflow Designer';
     case 'admin': return 'Project Administration';
     default: return 'Project Overview';

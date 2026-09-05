@@ -13,7 +13,7 @@ async function navigate(page: Page, testId: string, screenTestId: string) {
   await expect(page.getByTestId(screenTestId)).toBeVisible();
 }
 
-test('real Project Control shell exposes separate project screens and admin-only configuration', async ({ page }) => {
+test('real Project Control shell exposes project, workflow, verification, cost, commercial and financial screens', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
 
@@ -25,6 +25,10 @@ test('real Project Control shell exposes separate project screens and admin-only
   await expect(page.getByTestId('nav-overview')).toBeVisible();
   await expect(page.getByTestId('nav-documents')).toBeVisible();
   await expect(page.getByTestId('nav-workflows')).toBeVisible();
+  await expect(page.getByTestId('nav-verification')).toBeVisible();
+  await expect(page.getByTestId('nav-cost')).toBeVisible();
+  await expect(page.getByTestId('nav-commercial')).toBeVisible();
+  await expect(page.getByTestId('nav-financial')).toBeVisible();
   await expect(page.getByTestId('nav-designer')).toBeVisible();
   await expect(page.getByTestId('nav-admin')).toBeVisible();
 
@@ -35,6 +39,12 @@ test('real Project Control shell exposes separate project screens and admin-only
   await navigate(page, 'nav-workflows', 'screen-workflows');
   await expect(page.getByText('Work Verification / ITR Approval').first()).toBeVisible();
   await expect(page.getByText('ITR_APPROVAL').first()).toBeVisible();
+
+  await navigate(page, 'nav-verification', 'screen-verification');
+  await expect(page.getByRole('heading', { name: 'Verification & Measurement' })).toBeVisible();
+
+  await navigate(page, 'nav-commercial', 'screen-commercial');
+  await expect(page.getByRole('heading', { name: 'Commercial & IPC' })).toBeVisible();
 
   await navigate(page, 'nav-designer', 'screen-designer');
   await expect(page.getByTestId('workflow-builder')).toBeVisible();
@@ -64,9 +74,30 @@ test('real Project Control shell exposes separate project screens and admin-only
   await expect(page.getByTestId('screen-overview')).toBeVisible();
   await expect(page.getByTestId('nav-documents')).toBeVisible();
   await expect(page.getByTestId('nav-workflows')).toBeVisible();
+  await expect(page.getByTestId('nav-verification')).toBeVisible();
+  await expect(page.getByTestId('nav-cost')).toBeVisible();
+  await expect(page.getByTestId('nav-commercial')).toBeVisible();
+  await expect(page.getByTestId('nav-financial')).toBeVisible();
   await expect(page.getByTestId('nav-designer')).toHaveCount(0);
   await expect(page.getByTestId('nav-admin')).toHaveCount(0);
 
   await navigate(page, 'nav-workflows', 'screen-workflows');
   await expect(page.getByText('Site Team Raise').first()).toBeVisible();
+
+  // Private contractor cost is tested with a contractor actor, not Project Admin.
+  await navigate(page, 'nav-cost', 'screen-cost');
+  await expect(page.getByRole('heading', { name: 'Cost Control' })).toBeVisible();
+  await expect(page.locator('.control-error')).toHaveCount(0);
+
+  await navigate(page, 'nav-financial', 'screen-financial');
+  await expect(page.getByRole('heading', { name: 'Financial & Cash Flow' })).toBeVisible();
+  await expect(page.locator('.control-error')).toHaveCount(0);
+
+  await navigate(page, 'nav-verification', 'screen-verification');
+  await expect(page.getByRole('heading', { name: 'Verification & Measurement' })).toBeVisible();
+  await expect(page.locator('.control-error')).toHaveCount(0);
+
+  await navigate(page, 'nav-commercial', 'screen-commercial');
+  await expect(page.getByRole('heading', { name: 'Commercial & IPC' })).toBeVisible();
+  await expect(page.locator('.control-error')).toHaveCount(0);
 });
